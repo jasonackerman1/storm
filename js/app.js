@@ -114,11 +114,24 @@
   function playSlot(slotId) {
     var playerId = slots[slotId];
     if (!playerId) { openAssignSheet(slotId); return; }
+
+    var audio = document.getElementById('player-audio');
+
+    // Tapping the slot that's already playing stops it and rewinds to the
+    // start, rather than pausing mid-song — the next tap always starts
+    // the song fresh from the top.
+    if (currentPlayingSlot === slotId) {
+      audio.pause();
+      audio.currentTime = 0;
+      currentPlayingSlot = null;
+      renderGrid();
+      return;
+    }
+
     var player = library.filter(function (p) { return p.id === playerId; })[0];
     if (!player) return;
     var src = player.source === 'bundled' ? player.file : objectUrlCache.get(player.id);
     if (!src) return;
-    var audio = document.getElementById('player-audio');
     audio.pause();
     audio.src = src;
     audio.currentTime = 0;
