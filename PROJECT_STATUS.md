@@ -20,6 +20,15 @@ An offline-first PWA for playing walk-up songs at Storm baseball games. Installe
 7. **`2862418`** (2026-07-25) — Tap-to-stop-and-reset playback: tapping the currently-playing slot again stops the song and rewinds to 0:00.
 8. **`a845f34`** (2026-07-25) — Added "Let's Go" (Trick Daddy) as a team song for Walkout 2, initially cut to 10s + fade — **reverted, see commit 9.**
 9. **`5d292bb`** (2026-07-25) — Restored "Let's Go" to full length; team-level songs don't get trimmed (see content workflow rule below).
+10. **`6e5c323`** (2026-07-25) — Added Screen Wake Lock so iOS doesn't auto-lock the screen while the app is open. Re-requested whenever the app returns to foreground. Fails silently below iOS 16.4.
+
+## Gap-analysis conversation (2026-07-25)
+Jason asked directly what's missing / what to improve. Findings and his calls on each:
+- **iOS Safari's `<audio>` element normally obeys the phone's silent switch** — flagged as the biggest "might silently just not work" risk. **Jason tested it: songs play fine even when the phone is silenced.** No fix needed.
+- **Screen auto-lock mid-game** — real risk → fixed in commit 10.
+- **No backup/second device** for the lineup/local songs — Jason explicitly doesn't want this built.
+- **Loudness varies between clips** — Jason will address case-by-case if something stands out, not proactively normalize.
+- **Default 10s cut always starts at 0:00** — intentional; Jason will dictate a custom start time/length per song when needed (already the one-off-edit workflow).
 
 ## Content workflow rule (corrected 2026-07-25 — don't re-ask)
 - **Individual player walk-up songs** → cut to 10 seconds with a 1-second fade-out via `ffmpeg`, starting at 0:00 unless Jason specifies otherwise for that song.
@@ -58,9 +67,9 @@ Colors sampled directly from `storm_logo.jpg` (768×170px source): black `#00000
 - Rename "WALKOUT 1" / "WALKOUT 2" → "TEAM 1" / "TEAM 2" once Jason confirms on his phone that Owen's entry is showing up live. **Not yet confirmed.**
 
 ## Current state
-- Everything committed and pushed to `origin/main` through `5d292bb`.
+- Everything committed and pushed to `origin/main` through `6e5c323`.
 - `roster.json` has 2 entries: Owen Ackerman (#7, cut to 10s+fade) and "Let's Go" by Trick Daddy (team song, full length ~3:42).
-- Branding and interaction redesign are both live.
+- Branding, interaction redesign, and screen-wake-lock are all live.
 - Push cadence: Jason wants changes committed AND pushed after each round of work, not batched up.
 
 ## Open items / next steps
@@ -70,3 +79,4 @@ Colors sampled directly from `storm_logo.jpg` (768×170px source): black `#00000
 - Once cache fix confirmed: rename Walkout 1/2 → Team 1/Team 2.
 - Jason builds/shares the Google Doc and collects team song picks.
 - As MP3s arrive: name per convention → apply player-vs-team trim rule → update roster → commit → push.
+- Screen wake lock not yet field-tested during a real game (only verified error-free in headless testing).
