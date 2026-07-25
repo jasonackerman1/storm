@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Storm Walk-Up Songs</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Storm">
+<meta name="theme-color" content="#0b1f3a">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1>STORM</h1>
+  <div class="topbar-actions">
+    <button id="btn-clear-lineup" class="icon-btn" title="Clear Lineup">Clear</button>
+    <button id="btn-manage-team" class="icon-btn" title="Manage Team">&#9881;</button>
+  </div>
+</header>
+
+<main id="lineup-grid" class="lineup-grid"></main>
+
+<audio id="player-audio"></audio>
+
+<!-- Assign slot bottom sheet -->
+<div id="assign-sheet" class="sheet-overlay hidden">
+  <div class="sheet">
+    <div class="sheet-header">
+      <h2 id="assign-sheet-title">Assign Player</h2>
+      <button class="sheet-close" data-close="assign-sheet">&times;</button>
+    </div>
+    <button id="assign-clear-slot" class="list-row clear-row">Clear this slot</button>
+    <div id="assign-player-list" class="player-list"></div>
+  </div>
+</div>
+
+<!-- Manage team full screen -->
+<div id="manage-team" class="sheet-overlay hidden">
+  <div class="sheet sheet-full">
+    <div class="sheet-header">
+      <h2>Manage Team</h2>
+      <button class="sheet-close" data-close="manage-team">&times;</button>
+    </div>
+
+    <div id="manage-player-list" class="player-list manage-list"></div>
+
+    <form id="add-player-form" class="add-player-form">
+      <h3>Add New Player</h3>
+      <div class="form-row">
+        <input id="new-player-number" type="text" inputmode="numeric" placeholder="#" maxlength="3" required>
+        <input id="new-player-name" type="text" placeholder="Player name" required>
+      </div>
+      <label class="file-label">
+        <span id="file-label-text">Choose song (MP3)</span>
+        <input id="new-player-file" type="file" accept="audio/*,.mp3">
+      </label>
+      <button type="submit" class="primary-btn">Add Player</button>
+    </form>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
