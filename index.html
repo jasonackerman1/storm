@@ -52,9 +52,10 @@
     <form id="add-player-form" class="add-player-form">
       <h3>Add New Player</h3>
       <div class="form-row">
-        <input id="new-player-number" type="text" inputmode="numeric" placeholder="#" maxlength="3" required>
-        <input id="new-player-name" type="text" placeholder="Player name" required>
+        <input id="new-player-number" type="text" inputmode="numeric" placeholder="#" maxlength="3">
+        <input id="new-player-name" type="text" placeholder="Player or song name" required>
       </div>
+      <p class="form-hint">Leave # blank for team songs like Walkout or Victory.</p>
       <label class="file-label">
         <span id="file-label-text">Choose song (MP3)</span>
         <input id="new-player-file" type="file" accept="audio/*,.mp3">

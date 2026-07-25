@@ -1,18 +1,32 @@
 (function () {
   'use strict';
 
-  var SLOT_COUNT = 12;
+  var LINEUP_COUNT = 12;
   var DB_NAME = 'storm-db';
   var DB_VERSION = 1;
   var STORE = 'players';
+  var SLOTS_KEY = 'storm-slots-v2';
+
+  var SLOT_DEFS = [
+    { id: 'sp1', tag: 'WALKOUT 1', kind: 'special' },
+    { id: 'sp2', tag: 'WALKOUT 2', kind: 'special' },
+    { id: 'sp3', tag: 'VICTORY', kind: 'special' }
+  ];
+  for (var s = 1; s <= LINEUP_COUNT; s++) {
+    SLOT_DEFS.push({ id: 'l' + s, tag: '#' + s, kind: 'lineup' });
+  }
 
   var bundledPlayers = [];
   var localPlayers = [];
   var library = [];
-  var slots = [];
+  var slots = {};
   var currentPlayingSlot = null;
   var currentAssignSlot = null;
   var objectUrlCache = new Map();
+
+  function findSlotDef(id) {
+    return SLOT_DEFS.filter(function (d) { return d.id === id; })[0];
+  }
 
   // ---------- IndexedDB helpers ----------
   function openDB() {
@@ -64,18 +78,24 @@
 
   // ---------- Persistence ----------
   function loadSlots() {
+    var result = {};
+    SLOT_DEFS.forEach(function (def) { result[def.id] = null; });
     try {
-      var raw = localStorage.getItem('storm-slots');
+      var raw = localStorage.getItem(SLOTS_KEY);
       if (raw) {
-        var arr = JSON.parse(raw);
-        if (Array.isArray(arr) && arr.length === SLOT_COUNT) return arr;
+        var obj = JSON.parse(raw);
+        SLOT_DEFS.forEach(function (def) {
+          if (obj && Object.prototype.hasOwnProperty.call(obj, def.id)) {
+            result[def.id] = obj[def.id];
+          }
+        });
       }
     } catch (e) {}
-    return new Array(SLOT_COUNT).fill(null);
+    return result;
   }
 
   function saveSlots() {
-    localStorage.setItem('storm-slots', JSON.stringify(slots));
+    localStorage.setItem(SLOTS_KEY, JSON.stringify(slots));
   }
 
   function rebuildLibrary() {
@@ -91,9 +111,9 @@
   }
 
   // ---------- Playback ----------
-  function playSlot(i) {
-    var playerId = slots[i];
-    if (!playerId) { openAssignSheet(i); return; }
+  function playSlot(slotId) {
+    var playerId = slots[slotId];
+    if (!playerId) { openAssignSheet(slotId); return; }
     var player = library.filter(function (p) { return p.id === playerId; })[0];
     if (!player) return;
     var src = player.source === 'bundled' ? player.file : objectUrlCache.get(player.id);
@@ -103,58 +123,64 @@
     audio.src = src;
     audio.currentTime = 0;
     audio.play().catch(function () {});
-    currentPlayingSlot = i;
+    currentPlayingSlot = slotId;
     renderGrid();
   }
 
   // ---------- Rendering ----------
+  function buildSlotButton(def) {
+    var playerId = slots[def.id];
+    var player = playerId ? library.filter(function (p) { return p.id === playerId; })[0] : null;
+
+    var div = document.createElement('div');
+    var classes = ['slot-btn', def.kind];
+    classes.push(player ? (currentPlayingSlot === def.id ? 'playing filled' : 'filled') : 'empty');
+    div.className = classes.join(' ');
+    div.setAttribute('role', 'button');
+
+    var tagSpan = document.createElement('span');
+    tagSpan.className = 'slot-order';
+    tagSpan.textContent = def.tag;
+    div.appendChild(tagSpan);
+
+    if (player) {
+      if (def.kind === 'lineup' && player.number) {
+        var num = document.createElement('div');
+        num.className = 'slot-num';
+        num.textContent = player.number;
+        div.appendChild(num);
+      }
+      var name = document.createElement('div');
+      name.className = 'slot-name';
+      name.textContent = player.name;
+      div.appendChild(name);
+    } else {
+      var label = document.createElement('div');
+      label.className = 'slot-empty-label';
+      label.textContent = '+ Assign';
+      div.appendChild(label);
+    }
+
+    var editBtn = document.createElement('button');
+    editBtn.className = 'slot-edit';
+    editBtn.textContent = '✎';
+    editBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openAssignSheet(def.id);
+    });
+    div.appendChild(editBtn);
+
+    div.addEventListener('click', function () { playSlot(def.id); });
+
+    return div;
+  }
+
   function renderGrid() {
     var grid = document.getElementById('lineup-grid');
     grid.innerHTML = '';
-    for (var i = 0; i < SLOT_COUNT; i++) {
-      (function (i) {
-        var playerId = slots[i];
-        var player = playerId ? library.filter(function (p) { return p.id === playerId; })[0] : null;
-
-        var div = document.createElement('div');
-        div.className = 'slot-btn ' + (player ? (currentPlayingSlot === i ? 'playing filled' : 'filled') : 'empty');
-        div.setAttribute('role', 'button');
-
-        var orderSpan = document.createElement('span');
-        orderSpan.className = 'slot-order';
-        orderSpan.textContent = '#' + (i + 1);
-        div.appendChild(orderSpan);
-
-        if (player) {
-          var num = document.createElement('div');
-          num.className = 'slot-num';
-          num.textContent = player.number;
-          var name = document.createElement('div');
-          name.className = 'slot-name';
-          name.textContent = player.name;
-          div.appendChild(num);
-          div.appendChild(name);
-        } else {
-          var label = document.createElement('div');
-          label.className = 'slot-empty-label';
-          label.textContent = '+ Assign';
-          div.appendChild(label);
-        }
-
-        var editBtn = document.createElement('button');
-        editBtn.className = 'slot-edit';
-        editBtn.textContent = '✎';
-        editBtn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          openAssignSheet(i);
-        });
-        div.appendChild(editBtn);
-
-        div.addEventListener('click', function () { playSlot(i); });
-
-        grid.appendChild(div);
-      })(i);
-    }
+    SLOT_DEFS.forEach(function (def) {
+      grid.appendChild(buildSlotButton(def));
+    });
   }
 
   function renderManageList() {
@@ -163,13 +189,13 @@
     if (library.length === 0) {
       var empty = document.createElement('div');
       empty.className = 'src-tag';
-      empty.textContent = 'No players yet — add one below.';
+      empty.textContent = 'No songs yet — add one below.';
       list.appendChild(empty);
     }
     library.forEach(function (p) {
       var row = document.createElement('div');
       row.className = 'manage-row';
-      row.innerHTML = '<span class="num">' + escapeHtml(p.number) + '</span>' +
+      row.innerHTML = (p.number ? '<span class="num">' + escapeHtml(p.number) + '</span>' : '') +
         '<span class="name">' + escapeHtml(p.name) + '</span>';
       if (p.source === 'local') {
         var delBtn = document.createElement('button');
@@ -188,12 +214,14 @@
   }
 
   function deletePlayer(p) {
-    if (!confirm('Remove ' + p.name + ' from the team?')) return;
+    if (!confirm('Remove "' + p.name + '" from the team?')) return;
     idbDelete(p.id).then(function () {
       var url = objectUrlCache.get(p.id);
       if (url) { URL.revokeObjectURL(url); objectUrlCache.delete(p.id); }
       localPlayers = localPlayers.filter(function (x) { return x.id !== p.id; });
-      slots = slots.map(function (s) { return s === p.id ? null : s; });
+      Object.keys(slots).forEach(function (slotId) {
+        if (slots[slotId] === p.id) slots[slotId] = null;
+      });
       saveSlots();
       rebuildLibrary();
       renderManageList();
@@ -201,21 +229,23 @@
     });
   }
 
-  function openAssignSheet(slotIndex) {
-    currentAssignSlot = slotIndex;
-    document.getElementById('assign-sheet-title').textContent = 'Assign Slot #' + (slotIndex + 1);
+  function openAssignSheet(slotId) {
+    currentAssignSlot = slotId;
+    var def = findSlotDef(slotId);
+    document.getElementById('assign-sheet-title').textContent =
+      def.kind === 'special' ? 'Assign ' + def.tag : 'Assign Slot ' + def.tag;
     var list = document.getElementById('assign-player-list');
     list.innerHTML = '';
     if (library.length === 0) {
       var empty = document.createElement('div');
       empty.className = 'src-tag';
-      empty.textContent = 'No players yet. Add players from Manage Team first.';
+      empty.textContent = 'No songs yet. Add songs from Manage Team first.';
       list.appendChild(empty);
     }
     library.forEach(function (p) {
       var row = document.createElement('button');
       row.className = 'list-row';
-      row.innerHTML = '<span class="num">' + escapeHtml(p.number) + '</span>' +
+      row.innerHTML = (p.number ? '<span class="num">' + escapeHtml(p.number) + '</span>' : '') +
         '<span>' + escapeHtml(p.name) + '</span>' +
         '<span class="src-tag">' + (p.source === 'bundled' ? 'built-in' : 'phone') + '</span>';
       row.addEventListener('click', function () {
@@ -248,8 +278,8 @@
       var number = numberInput.value.trim();
       var name = nameInput.value.trim();
       var file = fileInput.files[0];
-      if (!number || !name || !file) {
-        alert('Please fill in number, name, and choose a song file.');
+      if (!name || !file) {
+        alert('Please fill in a name and choose a song file. (Jersey # is optional — leave it blank for team songs like Walkout or Victory.)');
         return;
       }
       var id = 'local-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
@@ -275,11 +305,16 @@
     });
 
     document.getElementById('btn-clear-lineup').addEventListener('click', function () {
-      if (!confirm('Clear all 12 slot assignments for a new game?')) return;
-      slots = new Array(SLOT_COUNT).fill(null);
+      if (!confirm('Clear all 12 lineup slots for a new game? (Walkout/Victory songs will stay assigned.)')) return;
+      var playingDef = currentPlayingSlot ? findSlotDef(currentPlayingSlot) : null;
+      SLOT_DEFS.filter(function (d) { return d.kind === 'lineup'; }).forEach(function (d) {
+        slots[d.id] = null;
+      });
       saveSlots();
-      document.getElementById('player-audio').pause();
-      currentPlayingSlot = null;
+      if (playingDef && playingDef.kind === 'lineup') {
+        document.getElementById('player-audio').pause();
+        currentPlayingSlot = null;
+      }
       renderGrid();
     });
 

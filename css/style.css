@@ -53,10 +53,10 @@ html, body {
 .lineup-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(4, 1fr);
-  gap: 10px;
-  padding: 10px;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
+  grid-template-rows: repeat(5, 1fr);
+  gap: 8px;
+  padding: 8px;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
   height: calc(100vh - 62px - env(safe-area-inset-top));
 }
 
@@ -88,14 +88,25 @@ html, body {
   color: var(--text-dim);
 }
 
+.slot-btn.special {
+  border-top: 3px solid var(--accent);
+}
+
+.slot-btn.special.empty {
+  border-top: 3px solid var(--accent);
+  border-left: 2px dashed var(--empty-border);
+  border-right: 2px dashed var(--empty-border);
+  border-bottom: 2px dashed var(--empty-border);
+}
+
 .slot-num {
-  font-size: clamp(1.8rem, 8vw, 2.6rem);
+  font-size: clamp(1.5rem, 7vw, 2.2rem);
   font-weight: 800;
   line-height: 1;
 }
 
 .slot-name {
-  font-size: clamp(0.7rem, 3vw, 0.95rem);
+  font-size: clamp(0.65rem, 2.6vw, 0.85rem);
   font-weight: 600;
   text-align: center;
   padding: 0 4px;
@@ -105,8 +116,13 @@ html, body {
   text-overflow: ellipsis;
 }
 
+.slot-btn.special .slot-name {
+  font-size: clamp(0.75rem, 3vw, 1rem);
+  white-space: normal;
+}
+
 .slot-empty-label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
 }
@@ -115,9 +131,14 @@ html, body {
   position: absolute;
   top: 6px;
   left: 8px;
-  font-size: 0.65rem;
+  font-size: 0.58rem;
   color: var(--text-dim);
   font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.slot-btn.special .slot-order {
+  color: var(--accent);
 }
 
 .slot-edit {
@@ -244,6 +265,8 @@ html, body {
 }
 
 .add-player-form h3 { margin: 0 0 10px 0; font-size: 1rem; color: var(--text-dim); }
+
+.form-hint { margin: -4px 0 10px 0; font-size: 0.78rem; color: var(--text-dim); }
 
 .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
 

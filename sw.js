@@ -1,4 +1,4 @@
-var CACHE_NAME = 'storm-cache-v1';
+var CACHE_NAME = 'storm-cache-v2';
 
 var SHELL_FILES = [
   './',
