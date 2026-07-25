@@ -407,6 +407,28 @@
     }
   }
 
+  // ---------- Keep screen awake ----------
+  // Without this, iOS locks the screen after ~30s of no touches — easy to
+  // hit between at-bats — and the next tap has to unlock the phone first.
+  var wakeLockSentinel = null;
+
+  function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    navigator.wakeLock.request('screen')
+      .then(function (sentinel) { wakeLockSentinel = sentinel; })
+      .catch(function () {}); // e.g. low battery mode — fail silently, app still works
+  }
+
+  function bindWakeLock() {
+    requestWakeLock();
+    document.addEventListener('visibilitychange', function () {
+      // The OS releases the lock whenever the tab/app is backgrounded, so
+      // it has to be re-requested every time the app comes back to the
+      // foreground — not just once at startup.
+      if (document.visibilityState === 'visible') requestWakeLock();
+    });
+  }
+
   // ---------- Init ----------
   function init() {
     slots = loadSlots();
@@ -434,6 +456,7 @@
         renderManageList();
         bindEvents();
         registerServiceWorker();
+        bindWakeLock();
       });
   }
 

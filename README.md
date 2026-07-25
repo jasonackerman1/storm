@@ -38,4 +38,4 @@ Open **Manage Team** → fill in jersey number, name, and pick the MP3 from the 
 ## Notes
 
 - "Clear Lineup" (top left) resets all 12 buttons to empty, ready for a new game's lineup.
-- Colors/logo are placeholder for now — easy to restyle later in `css/style.css` and swap `icons/icon-180.png` / `icons/icon-512.png`.
+- The screen is kept awake while the app is open, so it won't auto-lock between at-bats (requires iOS 16.4+ / a reasonably recent Safari — on an older iPhone the screen may still auto-lock, in which case a tap will wake it right back up before the next tap plays a song).
