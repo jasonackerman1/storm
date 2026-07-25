@@ -1,11 +1,23 @@
+@font-face {
+  font-family: 'Anton';
+  src: url('../fonts/Anton-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  --bg: #0b1f3a;
-  --bg-2: #112a52;
-  --accent: #ffd400;
-  --text: #f4f7fb;
-  --text-dim: #9fb0c9;
-  --empty-border: #2c4470;
-  --danger: #e05555;
+  --bg: #050505;
+  --bg-2: #141110;
+  --accent: #f8b000;
+  --accent-dim: #a87400;
+  --red: #d00018;
+  --red-dim: #7a0010;
+  --text: #f4ede1;
+  --text-dim: #9c8f7c;
+  --empty-border: #3a2f22;
+  --danger: #ff4d4d;
+  --jersey-font: 'Anton', -apple-system, sans-serif;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -26,29 +38,37 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: calc(env(safe-area-inset-top) + 10px) 16px 10px 16px;
-  background: var(--bg-2);
+  background: linear-gradient(180deg, #1a1512, #0c0908);
+  border-bottom: 3px solid var(--accent);
 }
+
+.topbar-brand { display: flex; align-items: center; gap: 8px; }
+
+.topbar-brand img { height: 26px; width: 26px; }
 
 .topbar h1 {
   margin: 0;
-  font-size: 1.4rem;
-  letter-spacing: 0.12em;
+  font-family: var(--jersey-font);
+  font-weight: 400;
+  font-size: 1.7rem;
+  letter-spacing: 0.1em;
   color: var(--accent);
+  -webkit-text-stroke: 1px var(--red-dim);
 }
 
 .topbar-actions { display: flex; gap: 10px; }
 
 .icon-btn {
-  background: rgba(255,255,255,0.08);
+  background: rgba(248,176,0,0.1);
+  border: 1px solid rgba(248,176,0,0.3);
   color: var(--text);
-  border: none;
   border-radius: 10px;
   padding: 8px 14px;
   font-size: 1.1rem;
   font-weight: 600;
 }
 
-.icon-btn:active { background: rgba(255,255,255,0.18); }
+.icon-btn:active { background: rgba(248,176,0,0.22); }
 
 .lineup-grid {
   display: grid;
@@ -63,29 +83,39 @@ html, body {
 .slot-btn {
   position: relative;
   border: none;
-  border-radius: 16px;
-  background: var(--bg-2);
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 2px, transparent 2px 6px),
+    linear-gradient(160deg, #1c1815, #0e0b09);
   color: var(--text);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   padding: 6px;
   overflow: hidden;
+  box-shadow: inset 0 0 0 2px rgba(248,176,0,0.15);
 }
 
-.slot-btn.filled { background: linear-gradient(160deg, #1a3a6b, #0f2648); }
+.slot-btn.filled {
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 2px, transparent 2px 6px),
+    linear-gradient(160deg, #221c17, #100d0a);
+  box-shadow: inset 0 0 0 2px var(--accent-dim);
+}
 
 .slot-btn.playing {
-  background: linear-gradient(160deg, var(--accent), #cf9f00);
-  color: #1a1200;
+  background: linear-gradient(160deg, var(--red), var(--red-dim));
+  color: var(--text);
+  box-shadow: inset 0 0 0 3px var(--accent);
 }
 
 .slot-btn.empty {
   background: transparent;
   border: 2px dashed var(--empty-border);
   color: var(--text-dim);
+  box-shadow: none;
 }
 
 .slot-btn.special {
@@ -100,24 +130,35 @@ html, body {
 }
 
 .slot-num {
-  font-size: clamp(1.5rem, 7vw, 2.2rem);
-  font-weight: 800;
+  font-family: var(--jersey-font);
+  font-weight: 400;
+  font-size: clamp(1.8rem, 8vw, 2.6rem);
   line-height: 1;
+  color: var(--text);
+  -webkit-text-stroke: 1.5px var(--accent);
+  text-shadow: 0 2px 0 rgba(0,0,0,0.5);
 }
 
+.slot-btn.playing .slot-num { -webkit-text-stroke: 1.5px #1a0000; color: var(--accent); }
+
 .slot-name {
-  font-size: clamp(0.65rem, 2.6vw, 0.85rem);
-  font-weight: 600;
+  font-family: var(--jersey-font);
+  font-weight: 400;
+  font-size: clamp(0.6rem, 2.4vw, 0.8rem);
+  letter-spacing: 0.03em;
   text-align: center;
   padding: 0 4px;
   max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--text-dim);
 }
 
+.slot-btn.playing .slot-name { color: var(--text); }
+
 .slot-btn.special .slot-name {
-  font-size: clamp(0.75rem, 3vw, 1rem);
+  font-size: clamp(0.7rem, 3vw, 0.95rem);
   white-space: normal;
 }
 
@@ -157,7 +198,7 @@ html, body {
   justify-content: center;
 }
 
-.slot-btn.playing .slot-edit { background: rgba(0,0,0,0.25); color: #1a1200; }
+.slot-btn.playing .slot-edit { background: rgba(0,0,0,0.3); color: var(--accent); }
 
 /* Sheets / modals */
 .sheet-overlay {
@@ -221,7 +262,7 @@ html, body {
   gap: 12px;
 }
 
-.list-row:active { background: #16345f; }
+.list-row:active { background: #241d16; }
 
 .list-row .num {
   font-weight: 800;
