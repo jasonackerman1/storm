@@ -128,6 +128,40 @@
   }
 
   // ---------- Rendering ----------
+  var LONG_PRESS_MS = 500;
+
+  function lastNameOf(fullName) {
+    var parts = (fullName || '').trim().split(/\s+/);
+    return parts[parts.length - 1] || fullName;
+  }
+
+  function bindSlotInteraction(div, slotId) {
+    var pressTimer = null;
+    var longPressFired = false;
+
+    function clearTimer() {
+      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+    }
+
+    div.addEventListener('pointerdown', function () {
+      longPressFired = false;
+      clearTimer();
+      pressTimer = setTimeout(function () {
+        longPressFired = true;
+        openAssignSheet(slotId);
+      }, LONG_PRESS_MS);
+    });
+
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evt) {
+      div.addEventListener(evt, clearTimer);
+    });
+
+    div.addEventListener('click', function () {
+      if (longPressFired) { longPressFired = false; return; }
+      playSlot(slotId);
+    });
+  }
+
   function buildSlotButton(def) {
     var playerId = slots[def.id];
     var player = playerId ? library.filter(function (p) { return p.id === playerId; })[0] : null;
@@ -138,22 +172,35 @@
     div.className = classes.join(' ');
     div.setAttribute('role', 'button');
 
-    var tagSpan = document.createElement('span');
-    tagSpan.className = 'slot-order';
-    tagSpan.textContent = def.tag;
-    div.appendChild(tagSpan);
+    // Once a lineup slot has a player, its name + number identify it —
+    // the slot tag ("#7") is redundant. Team-song slots keep their tag
+    // (WALKOUT 1 / VICTORY) since there's no number to take its place.
+    if (!player || def.kind !== 'lineup') {
+      var tagSpan = document.createElement('span');
+      tagSpan.className = 'slot-order';
+      tagSpan.textContent = def.tag;
+      div.appendChild(tagSpan);
+    }
 
     if (player) {
-      if (def.kind === 'lineup' && player.number) {
-        var num = document.createElement('div');
-        num.className = 'slot-num';
-        num.textContent = player.number;
-        div.appendChild(num);
+      if (def.kind === 'lineup') {
+        var name = document.createElement('div');
+        name.className = 'slot-name slot-lastname';
+        name.textContent = lastNameOf(player.name).toUpperCase();
+        div.appendChild(name);
+
+        if (player.number) {
+          var num = document.createElement('div');
+          num.className = 'slot-num';
+          num.textContent = player.number;
+          div.appendChild(num);
+        }
+      } else {
+        var teamName = document.createElement('div');
+        teamName.className = 'slot-name';
+        teamName.textContent = player.name;
+        div.appendChild(teamName);
       }
-      var name = document.createElement('div');
-      name.className = 'slot-name';
-      name.textContent = player.name;
-      div.appendChild(name);
     } else {
       var label = document.createElement('div');
       label.className = 'slot-empty-label';
@@ -161,16 +208,7 @@
       div.appendChild(label);
     }
 
-    var editBtn = document.createElement('button');
-    editBtn.className = 'slot-edit';
-    editBtn.textContent = '✎';
-    editBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      openAssignSheet(def.id);
-    });
-    div.appendChild(editBtn);
-
-    div.addEventListener('click', function () { playSlot(def.id); });
+    bindSlotInteraction(div, def.id);
 
     return div;
   }

@@ -10,7 +10,7 @@ var SHELL_FILES = [
   './roster.json',
   './icons/icon-180.png',
   './icons/icon-512.png',
-  './icons/cyclone.svg',
+  './icons/lightning.svg',
   './fonts/Anton-Regular.woff2'
 ];
 

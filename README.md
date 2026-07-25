@@ -5,7 +5,7 @@ A simple offline web app for playing walk-up songs at Storm baseball games. Live
 ## How it works
 
 - **12 big buttons**, one per lineup spot. Tap a button to play that player's song. Tapping a different button instantly stops the current song and starts the new one.
-- Each button can be **reassigned** at any time (tap the small pencil icon on the button) to any player on the team — so you can match the grid to whatever lineup is playing that day, even if your full roster is bigger than 12.
+- Each button can be **reassigned** at any time — **press and hold** the button (about half a second) to pull up the player list, instead of tapping it (a quick tap plays the currently assigned song). This lets you match the grid to whatever lineup is playing that day, even if your full roster is bigger than 12.
 - **Manage Team** (gear icon, top right) is the full player list. It's also where you add brand-new players later, right from your phone — no computer needed.
 - Everything is stored locally on the phone (either bundled into the app or saved in the browser's local storage). No internet is needed once it's installed and opened at least once.
 

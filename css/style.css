@@ -132,7 +132,7 @@ html, body {
 .slot-num {
   font-family: var(--jersey-font);
   font-weight: 400;
-  font-size: clamp(1.8rem, 8vw, 2.6rem);
+  font-size: clamp(2.2rem, 9.5vw, 3.2rem);
   line-height: 1;
   color: var(--text);
   -webkit-text-stroke: 1.5px var(--accent);
@@ -162,6 +162,15 @@ html, body {
   white-space: normal;
 }
 
+.slot-name.slot-lastname {
+  font-size: clamp(1rem, 4.8vw, 1.5rem);
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  -webkit-text-stroke: 0.5px var(--red-dim);
+}
+
+.slot-btn.playing .slot-name.slot-lastname { color: var(--text); -webkit-text-stroke: 0.5px #1a0000; }
+
 .slot-empty-label {
   font-size: 0.75rem;
   font-weight: 600;
@@ -181,24 +190,6 @@ html, body {
 .slot-btn.special .slot-order {
   color: var(--accent);
 }
-
-.slot-edit {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0,0,0,0.35);
-  color: var(--text);
-  font-size: 0.95rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.slot-btn.playing .slot-edit { background: rgba(0,0,0,0.3); color: var(--accent); }
 
 /* Sheets / modals */
 .sheet-overlay {
