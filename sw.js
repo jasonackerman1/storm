@@ -1,4 +1,4 @@
-var CACHE_NAME = 'storm-cache-v4';
+var CACHE_NAME = 'storm-cache-v5';
 var NETWORK_FIRST_FILES = ['./', './index.html', './css/style.css', './js/app.js', './manifest.json', './roster.json'];
 
 var SHELL_FILES = [
@@ -10,7 +10,7 @@ var SHELL_FILES = [
   './roster.json',
   './icons/icon-180.png',
   './icons/icon-512.png',
-  './icons/lightning.svg',
+  './icons/tornado.png',
   './fonts/Anton-Regular.woff2'
 ];
 
