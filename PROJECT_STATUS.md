@@ -23,6 +23,9 @@ An offline-first PWA for playing walk-up songs at Storm baseball games. Installe
 10. **`6e5c323`** (2026-07-25) — Added Screen Wake Lock so iOS doesn't auto-lock the screen while the app is open. Re-requested whenever the app returns to foreground. Fails silently below iOS 16.4.
 11. **`3a83a52`** (2026-07-25) — Added "A Storm is Coming" as a team song for Walkout 1, full length (~4:56), untrimmed.
 12. **`f45ef78`** (2026-07-25) — Moved the lightning bolt into the header wordmark as the letter O ("ST[bolt]RM"), removed the red outline stroke (gold fill only). Regenerated app icons from the same updated SVG.
+13. **`98ec0c4`** (2026-07-25) — Fixed lingering red-stroke complaint (stale service-worker cache, not a code bug) and tightened bolt spacing in the wordmark. `CACHE_NAME` → v4.
+14. **`9f752da`** (2026-07-25) — Jason provided a clean isolated `tornado.png`; replaced the lightning bolt with it as the header O and regenerated the app icon set. Removed `lightning.svg`. `CACHE_NAME` → v5.
+15. **`d651a0c`** (2026-07-25) — Jason provided the full official wordmark (`storm-wordmark.png`); replaced the hand-composited header markup with this single authentic image. App icon stays tornado-only (square). `CACHE_NAME` → v6.
 
 ## Gap-analysis conversation (2026-07-25)
 Jason asked directly what's missing / what to improve. Findings and his calls on each:
@@ -49,10 +52,11 @@ When first cutting "Let's Go" to 10s, the original full-length MP3 was renamed t
 
 **When touching `sw.js` again:** any file that must reflect a new deploy immediately belongs in `NETWORK_FIRST_FILES`, and bump `CACHE_NAME` whenever the precache file list changes.
 
-## Branding (current, as of `d58a10d`)
+## Branding (current, as of `d651a0c`)
 Colors sampled directly from `storm_logo.jpg` (768×170px source): black `#000000`, red `#D00018`, gold `#F8B000` — the `:root` variables in `css/style.css`.
 - **Font:** Anton, bundled locally as `fonts/Anton-Regular.woff2` so it works fully offline.
-- **Icon:** first pass hand-drew a cyclone/tornado SVG — Jason rejected it ("terrible"). Replaced with a **lightning bolt** (`icons/lightning.svg`), recreated from the original placeholder icon. **Refined `f45ef78`:** red outline stroke removed (gold fill only), and the bolt now sits inside the wordmark itself as the letter O ("ST[bolt]RM") rather than beside it. Used in the header and as the app icon source — regenerate the icon whenever this SVG changes so they stay in sync.
+- **Header logo — 4 iterations:** hand-drawn cyclone SVG (rejected, "terrible") → lightning bolt recolor of the original placeholder icon (kept a while) → bolt moved inside the wordmark as the O + red stroke removed → **replaced entirely** once Jason supplied real assets. Current: `icons/storm-wordmark.png` (the actual official logo, transparent bg, Jason-provided) used directly as a single `<img>` in the header. `icons/tornado.png` (also Jason-provided, isolated tornado) is the source for the app icon set — kept as a separate square asset since the wordmark's wide aspect ratio doesn't fit an app icon.
+- **Lesson:** every hand-built/approximated icon got superseded the moment Jason supplied real source art. Prefer real assets over hand-drawn approximations whenever they're available, even after investing effort tuning the hand-built version.
 - **Slot cards:** look like the back of a baseball jersey. Once a lineup slot is filled: no pencil icon, no corner "#N" tag — just LASTNAME over a bigger number. Team-song slots (Walkout/Victory) keep their corner tag.
 - Verified with a temporary headless-Chrome + puppeteer-core script (removed after each verification, not committed).
 
@@ -69,9 +73,10 @@ Colors sampled directly from `storm_logo.jpg` (768×170px source): black `#00000
 - Rename "WALKOUT 1" / "WALKOUT 2" → "TEAM 1" / "TEAM 2" once Jason confirms on his phone that Owen's entry is showing up live. **Not yet confirmed.**
 
 ## Current state
-- Everything committed and pushed to `origin/main` through `f45ef78`.
+- Everything committed and pushed to `origin/main` through `d651a0c`.
 - `roster.json` has 3 entries: Owen Ackerman (#7, cut to 10s+fade), "Let's Go" by Trick Daddy (team song for Walkout 2, full length ~3:42), and "A Storm is Coming" (team song for Walkout 1, full length ~4:56).
-- Branding (including the refined ST[bolt]RM header logo), interaction redesign, and screen-wake-lock are all live.
+- `CACHE_NAME` is `storm-cache-v6`.
+- Branding (including the real official header wordmark logo), interaction redesign, and screen-wake-lock are all live.
 - Push cadence: Jason wants changes committed AND pushed after each round of work, not batched up.
 
 ## Open items / next steps
