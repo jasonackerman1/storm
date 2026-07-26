@@ -1,4 +1,5 @@
 [
   { "id": "p7", "number": "7", "name": "Owen Ackerman", "file": "mp3/7-owen-ackerman.mp3" },
-  { "id": "t-letsgo", "name": "Let's Go (Trick Daddy)", "file": "mp3/trick-daddy-lets-go.mp3" }
+  { "id": "t-letsgo", "name": "Let's Go (Trick Daddy)", "file": "mp3/trick-daddy-lets-go.mp3" },
+  { "id": "t-stormiscoming", "name": "A Storm is Coming", "file": "mp3/a-storm-is-coming.mp3" }
 ]
