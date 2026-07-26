@@ -58,7 +58,7 @@ html, body {
   height: 0.95em;
   width: auto;
   vertical-align: -0.1em;
-  margin: 0 -0.03em;
+  margin: 0 -0.1em;
 }
 
 .topbar-actions { display: flex; gap: 10px; }
