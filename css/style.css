@@ -44,8 +44,6 @@ html, body {
 
 .topbar-brand { display: flex; align-items: center; gap: 8px; }
 
-.topbar-brand img { height: 26px; width: 26px; }
-
 .topbar h1 {
   margin: 0;
   font-family: var(--jersey-font);
@@ -54,6 +52,13 @@ html, body {
   letter-spacing: 0.1em;
   color: var(--accent);
   -webkit-text-stroke: 1px var(--red-dim);
+}
+
+.topbar h1 .bolt-o {
+  height: 0.95em;
+  width: auto;
+  vertical-align: -0.1em;
+  margin: 0 -0.03em;
 }
 
 .topbar-actions { display: flex; gap: 10px; }
