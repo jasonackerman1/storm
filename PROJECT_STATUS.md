@@ -21,6 +21,7 @@ An offline-first PWA for playing walk-up songs at Storm baseball games. Installe
 8. **`a845f34`** (2026-07-25) — Added "Let's Go" (Trick Daddy) as a team song for Walkout 2, initially cut to 10s + fade — **reverted, see commit 9.**
 9. **`5d292bb`** (2026-07-25) — Restored "Let's Go" to full length; team-level songs don't get trimmed (see content workflow rule below).
 10. **`6e5c323`** (2026-07-25) — Added Screen Wake Lock so iOS doesn't auto-lock the screen while the app is open. Re-requested whenever the app returns to foreground. Fails silently below iOS 16.4.
+11. **`3a83a52`** (2026-07-25) — Added "A Storm is Coming" as a team song for Walkout 1, full length (~4:56), untrimmed.
 
 ## Gap-analysis conversation (2026-07-25)
 Jason asked directly what's missing / what to improve. Findings and his calls on each:
@@ -67,15 +68,15 @@ Colors sampled directly from `storm_logo.jpg` (768×170px source): black `#00000
 - Rename "WALKOUT 1" / "WALKOUT 2" → "TEAM 1" / "TEAM 2" once Jason confirms on his phone that Owen's entry is showing up live. **Not yet confirmed.**
 
 ## Current state
-- Everything committed and pushed to `origin/main` through `6e5c323`.
-- `roster.json` has 2 entries: Owen Ackerman (#7, cut to 10s+fade) and "Let's Go" by Trick Daddy (team song, full length ~3:42).
+- Everything committed and pushed to `origin/main` through `3a83a52`.
+- `roster.json` has 3 entries: Owen Ackerman (#7, cut to 10s+fade), "Let's Go" by Trick Daddy (team song for Walkout 2, full length ~3:42), and "A Storm is Coming" (team song for Walkout 1, full length ~4:56).
 - Branding, interaction redesign, and screen-wake-lock are all live.
 - Push cadence: Jason wants changes committed AND pushed after each round of work, not batched up.
 
 ## Open items / next steps
 - Jason confirms the cache fix worked on his phone (may need a full quit + reopen, not just backgrounding).
 - Jason tries the press-and-hold reassign gesture live to confirm the ~500ms threshold feels right (only verified in headless browser so far).
-- Jason still needs to assign "Let's Go" to the WALKOUT 2 slot in the app itself.
+- Jason still needs to assign "Let's Go" to WALKOUT 2 and "A Storm is Coming" to WALKOUT 1 in the app itself.
 - Once cache fix confirmed: rename Walkout 1/2 → Team 1/Team 2.
 - Jason builds/shares the Google Doc and collects team song picks.
 - As MP3s arrive: name per convention → apply player-vs-team trim rule → update roster → commit → push.
