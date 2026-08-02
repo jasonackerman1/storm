@@ -22,7 +22,12 @@
   var slots = {};
   var currentPlayingSlot = null;
   var currentAssignSlot = null;
+  var selectedSlot = null;
+  var dragState = null;
   var objectUrlCache = new Map();
+
+  var LINEUP_IDS = SLOT_DEFS.filter(function (d) { return d.kind === 'lineup'; })
+    .map(function (d) { return d.id; });
 
   function findSlotDef(id) {
     return SLOT_DEFS.filter(function (d) { return d.id === id; })[0];
@@ -110,34 +115,80 @@
     });
   }
 
-  // ---------- Playback ----------
-  function playSlot(slotId) {
+  // ---------- Playback (select-then-confirm) ----------
+  // A tap only ever selects a slot; nothing plays until the dedicated Play
+  // button in the bottom bar is pressed. This is a deliberate safety step —
+  // a mis-tap on the wrong slot no longer fires that player's song.
+  function selectSlot(slotId) {
     var playerId = slots[slotId];
     if (!playerId) { openAssignSheet(slotId); return; }
+    selectedSlot = slotId;
+    renderGrid();
+    updateActionBar();
+  }
 
+  function clampSelection() {
+    if (selectedSlot && !slots[selectedSlot]) selectedSlot = null;
+  }
+
+  function stopPlayback() {
     var audio = document.getElementById('player-audio');
+    audio.pause();
+    audio.currentTime = 0;
+    currentPlayingSlot = null;
+  }
 
-    // Tapping the slot that's already playing stops it and rewinds to the
-    // start, rather than pausing mid-song — the next tap always starts
-    // the song fresh from the top.
-    if (currentPlayingSlot === slotId) {
-      audio.pause();
-      audio.currentTime = 0;
-      currentPlayingSlot = null;
-      renderGrid();
-      return;
-    }
-
+  function firePlayback(slotId) {
+    var playerId = slots[slotId];
     var player = library.filter(function (p) { return p.id === playerId; })[0];
     if (!player) return;
     var src = player.source === 'bundled' ? player.file : objectUrlCache.get(player.id);
     if (!src) return;
+    var audio = document.getElementById('player-audio');
     audio.pause();
     audio.src = src;
     audio.currentTime = 0;
     audio.play().catch(function () {});
     currentPlayingSlot = slotId;
+  }
+
+  function toggleActionPlay() {
+    if (!selectedSlot) return;
+    // Tapping Play again on the slot that's already playing stops it and
+    // rewinds to the start — the next Play always starts fresh from the top.
+    if (currentPlayingSlot === selectedSlot) {
+      stopPlayback();
+    } else {
+      firePlayback(selectedSlot);
+    }
     renderGrid();
+    updateActionBar();
+  }
+
+  function openEditForSelected() {
+    if (!selectedSlot) return;
+    openAssignSheet(selectedSlot);
+  }
+
+  function updateActionBar() {
+    var playBtn = document.getElementById('action-play');
+    var editBtn = document.getElementById('action-edit');
+    if (!selectedSlot) {
+      playBtn.disabled = true;
+      playBtn.textContent = 'Select a Song';
+      playBtn.classList.remove('stop-state');
+      editBtn.disabled = true;
+      return;
+    }
+    editBtn.disabled = false;
+    playBtn.disabled = false;
+    if (currentPlayingSlot === selectedSlot) {
+      playBtn.textContent = 'STOP';
+      playBtn.classList.add('stop-state');
+    } else {
+      playBtn.textContent = 'PLAY';
+      playBtn.classList.remove('stop-state');
+    }
   }
 
   // ---------- Rendering ----------
@@ -148,7 +199,8 @@
     return parts[parts.length - 1] || fullName;
   }
 
-  function bindSlotInteraction(div, slotId) {
+  function bindSlotInteraction(div, def) {
+    var slotId = def.id;
     var pressTimer = null;
     var longPressFired = false;
 
@@ -156,13 +208,17 @@
       if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
     }
 
-    div.addEventListener('pointerdown', function () {
+    div.addEventListener('pointerdown', function (e) {
       longPressFired = false;
       clearTimer();
-      pressTimer = setTimeout(function () {
-        longPressFired = true;
-        openAssignSheet(slotId);
-      }, LONG_PRESS_MS);
+      // Only the numbered batting-order slots can be dragged/reordered —
+      // the Walkout/Victory row isn't sequential, so long-press there is a no-op.
+      if (def.kind === 'lineup' && slots[slotId]) {
+        pressTimer = setTimeout(function () {
+          longPressFired = true;
+          armDrag(slotId, div, e);
+        }, LONG_PRESS_MS);
+      }
     });
 
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evt) {
@@ -171,8 +227,92 @@
 
     div.addEventListener('click', function () {
       if (longPressFired) { longPressFired = false; return; }
-      playSlot(slotId);
+      selectSlot(slotId);
     });
+  }
+
+  // ---------- Drag-to-reorder (lineup slots only) ----------
+  function armDrag(slotId, div, downEvent) {
+    var rects = [];
+    LINEUP_IDS.forEach(function (id) {
+      var el = document.querySelector('.slot-btn[data-slot-id="' + id + '"]');
+      if (el) rects.push({ id: id, rect: el.getBoundingClientRect() });
+    });
+    dragState = {
+      sourceId: slotId,
+      el: div,
+      rects: rects,
+      startX: downEvent.clientX,
+      startY: downEvent.clientY,
+      lastTargetId: slotId
+    };
+    div.classList.add('dragging');
+    document.addEventListener('pointermove', onDragMove);
+    document.addEventListener('pointerup', onDragEnd);
+    document.addEventListener('pointercancel', onDragEnd);
+  }
+
+  function onDragMove(e) {
+    if (!dragState) return;
+    e.preventDefault();
+    var dx = e.clientX - dragState.startX;
+    var dy = e.clientY - dragState.startY;
+    dragState.el.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+
+    var nearest = null, nearestDist = Infinity;
+    dragState.rects.forEach(function (r) {
+      var cx = r.rect.left + r.rect.width / 2;
+      var cy = r.rect.top + r.rect.height / 2;
+      var d = Math.hypot(e.clientX - cx, e.clientY - cy);
+      if (d < nearestDist) { nearestDist = d; nearest = r; }
+    });
+    if (nearest && nearest.id !== dragState.lastTargetId) {
+      var prevEl = document.querySelector('.slot-btn[data-slot-id="' + dragState.lastTargetId + '"]');
+      if (prevEl) prevEl.classList.remove('drag-target');
+      if (nearest.id !== dragState.sourceId) {
+        var nextEl = document.querySelector('.slot-btn[data-slot-id="' + nearest.id + '"]');
+        if (nextEl) nextEl.classList.add('drag-target');
+      }
+      dragState.lastTargetId = nearest.id;
+    }
+  }
+
+  function onDragEnd() {
+    if (!dragState) return;
+    document.removeEventListener('pointermove', onDragMove);
+    document.removeEventListener('pointerup', onDragEnd);
+    document.removeEventListener('pointercancel', onDragEnd);
+
+    var sourceId = dragState.sourceId;
+    var targetId = dragState.lastTargetId;
+    document.querySelectorAll('.drag-target').forEach(function (el) { el.classList.remove('drag-target'); });
+    dragState = null;
+
+    if (targetId && targetId !== sourceId) {
+      reorderLineup(sourceId, targetId);
+    } else {
+      renderGrid();
+    }
+  }
+
+  function reorderLineup(sourceId, targetId) {
+    var fromIdx = LINEUP_IDS.indexOf(sourceId);
+    var toIdx = LINEUP_IDS.indexOf(targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    var values = LINEUP_IDS.map(function (id) { return slots[id]; });
+    var moved = values.splice(fromIdx, 1)[0];
+    values.splice(toIdx, 0, moved);
+    LINEUP_IDS.forEach(function (id, i) { slots[id] = values[i]; });
+    saveSlots();
+
+    // Reordering can scramble what "currently playing"/"selected" pointed
+    // at — safer to reset both than risk the bar highlighting a slot that
+    // no longer holds the song it was pointing to.
+    stopPlayback();
+    selectedSlot = null;
+
+    renderGrid();
+    updateActionBar();
   }
 
   function buildSlotButton(def) {
@@ -181,9 +321,13 @@
 
     var div = document.createElement('div');
     var classes = ['slot-btn', def.kind];
-    classes.push(player ? (currentPlayingSlot === def.id ? 'playing filled' : 'filled') : 'empty');
+    var stateClass = 'filled';
+    if (currentPlayingSlot === def.id) stateClass = 'playing filled';
+    else if (selectedSlot === def.id) stateClass = 'selected filled';
+    classes.push(player ? stateClass : 'empty');
     div.className = classes.join(' ');
     div.setAttribute('role', 'button');
+    div.dataset.slotId = def.id;
 
     // Once a lineup slot has a player, its name + number identify it —
     // the slot tag ("#7") is redundant. Team-song slots keep their tag
@@ -221,7 +365,7 @@
       div.appendChild(label);
     }
 
-    bindSlotInteraction(div, def.id);
+    bindSlotInteraction(div, def);
 
     return div;
   }
@@ -274,9 +418,12 @@
         if (slots[slotId] === p.id) slots[slotId] = null;
       });
       saveSlots();
+      if (currentPlayingSlot && !slots[currentPlayingSlot]) stopPlayback();
+      clampSelection();
       rebuildLibrary();
       renderManageList();
       renderGrid();
+      updateActionBar();
     });
   }
 
@@ -302,8 +449,12 @@
       row.addEventListener('click', function () {
         slots[currentAssignSlot] = p.id;
         saveSlots();
+        // The assigned song changed under this slot — if it was mid-playback,
+        // the audio no longer matches what the slot now shows, so stop it.
+        if (currentPlayingSlot === currentAssignSlot) stopPlayback();
         closeSheet('assign-sheet');
         renderGrid();
+        updateActionBar();
       });
       list.appendChild(row);
     });
@@ -353,7 +504,11 @@
     document.getElementById('player-audio').addEventListener('ended', function () {
       currentPlayingSlot = null;
       renderGrid();
+      updateActionBar();
     });
+
+    document.getElementById('action-play').addEventListener('click', toggleActionPlay);
+    document.getElementById('action-edit').addEventListener('click', openEditForSelected);
 
     document.getElementById('btn-clear-lineup').addEventListener('click', function () {
       if (!confirm('Clear all 12 lineup slots for a new game? (Walkout/Victory songs will stay assigned.)')) return;
@@ -362,11 +517,10 @@
         slots[d.id] = null;
       });
       saveSlots();
-      if (playingDef && playingDef.kind === 'lineup') {
-        document.getElementById('player-audio').pause();
-        currentPlayingSlot = null;
-      }
+      if (playingDef && playingDef.kind === 'lineup') stopPlayback();
+      clampSelection();
       renderGrid();
+      updateActionBar();
     });
 
     document.getElementById('btn-manage-team').addEventListener('click', function () {
@@ -378,12 +532,11 @@
       if (currentAssignSlot == null) return;
       slots[currentAssignSlot] = null;
       saveSlots();
-      if (currentPlayingSlot === currentAssignSlot) {
-        document.getElementById('player-audio').pause();
-        currentPlayingSlot = null;
-      }
+      if (currentPlayingSlot === currentAssignSlot) stopPlayback();
+      clampSelection();
       closeSheet('assign-sheet');
       renderGrid();
+      updateActionBar();
     });
 
     document.querySelectorAll('[data-close]').forEach(function (btn) {
@@ -455,6 +608,7 @@
         renderGrid();
         renderManageList();
         bindEvents();
+        updateActionBar();
         registerServiceWorker();
         bindWakeLock();
       });
