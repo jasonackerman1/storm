@@ -1,4 +1,4 @@
-var CACHE_NAME = 'storm-cache-v21';
+var CACHE_NAME = 'storm-cache-v22';
 var NETWORK_FIRST_FILES = ['./', './index.html', './css/style.css', './js/app.js', './manifest.json', './roster.json'];
 
 var SHELL_FILES = [
