@@ -247,6 +247,10 @@
       lastTargetId: slotId
     };
     div.classList.add('dragging');
+    // Haptic pickup cue where supported (Android Chrome). iOS Safari has no
+    // Vibration API at all, so this is a silent no-op on iPhone — the blue
+    // dragging outline is the cue that actually reaches every device.
+    if (navigator.vibrate) { try { navigator.vibrate(15); } catch (e) {} }
     document.addEventListener('pointermove', onDragMove);
     document.addEventListener('pointerup', onDragEnd);
     document.addEventListener('pointercancel', onDragEnd);
