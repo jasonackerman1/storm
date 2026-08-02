@@ -1,6 +1,6 @@
 # Storm — Project Status
 
-_Last updated: 2026-08-02_
+_Last updated: 2026-08-02 (evening)_
 
 ## What it is
 An offline-first PWA for playing walk-up songs at Storm baseball games. Installed to the iPhone home screen via GitHub Pages (`github.com/jasonackerman1/storm`); works with no signal at the field once installed and opened once with internet.
@@ -35,6 +35,30 @@ An offline-first PWA for playing walk-up songs at Storm baseball games. Installe
 20. **`c51fa8c`** — Added an ADV header toggle for whether manual Stop also advances (default off at this point).
 21. **`86cadf7`** — Removed the Clear Lineup button — the team is moving to a permanently-populated roster where a full wipe never comes up.
 22. **`1df79ee`** — Replaced the ADV header button with a real switch in a new "Settings" section atop the Manage Team screen. Default flipped to ON for new installs.
+
+### Same-day continuation, 2026-08-02 evening — full roster loaded, real batting order baked in as default
+23-33. Eleven commits, one per kid, each following the same routine: check `git status`/`ffprobe` on the new untracked file → back up to scratchpad as `{name}-ORIGINAL-FULL.mp3` → `ffmpeg` cut to 10s + 1s fade-out from the given timestamp → verify exactly 10.0s via `ffprobe` → add `roster.json` entry → bump `CACHE_NAME` → commit + push. In order: `8d4237c` Bobby Youmans #45 (start 40.0), `8291f03` Kayden Lyons #5 (10.0), `d746ba3` Jaxsen Rodriguez #99 (59.5), `c7ffb48` Dom Diaz #12 (14.5), `b09ca8c` Jake Harris #13 (0), `1fb7233` Kameren Maldonoldo #11 (43.7), `6f761c1` Caleb Gingras #68 (41.5), `43ba7b4` Ethan Ladanyi #29 (1:13), `8585b01` Liam Pichardo #2 (0), `1182b53` Sam Va Tassel #4 (9.7), `d281cac` Manson Frank #15 (19.7).
+34. **`4440bfc`** — Bobby Youmans start time corrected 40.0 → 44.0, re-cut from the same preserved original.
+35. **`d4b0eee`** — Manson Frank start time corrected 19.7 → 20.0, re-cut from the same preserved original.
+36. **`444d4e2`** — Added "Swagger Like Us" as a Victory team song, full length. Verified a filename with literal spaces resolves fine for both playback and service-worker precache (browsers auto-encode the space).
+37. **`48d6e45`** — **Baked in the real batting order as the actual default lineup** — see dedicated section below.
+38. **`5743b52`** — Jason replaced the working `45-bobby-youmans.mp3` file, asked for a re-cut at 45.5. Byte-identical (via `md5`) to the already-preserved original — re-cut from that, no new backup needed.
+39. **`4a6a6e8`** — Same for Sam Va Tassel at start 10.0 — except the replacement landed as `4-sam-va-tassel.mp3.mp3` (double extension) with the correctly-named original deleted (`git status` showed **D**, not **M**) — renamed back before proceeding. See file-replacement workflow below.
+40. *(no commit)* — A second "replace and re-cut" request for Manson Frank at the same 0:20 start already in place produced a byte-identical file — `git status` showed no diff, nothing to commit.
+41. **`27a81f5`** — Added two more Victory *options* (not assigned to the slot): "All I Do Is Win," "Bring Em Out," both full length.
+42. **`f1d9c87`** — Added a third extra Victory option, "Black and Yellow," same treatment.
+
+### File-replacement workflow (new pattern, 2026-08-02)
+When Jason says "I replaced X's mp3, re-cut it starting at Y":
+1. `git status --short mp3/` — if it shows **D** (deleted) with no matching untracked file, check `ls mp3/` for a doubled extension (e.g. `name.mp3.mp3`) and rename it back.
+2. Compare `md5` of the current file against the scratchpad-preserved `{name}-ORIGINAL-FULL.mp3`. **Every replacement this session was byte-identical** — re-cut from the already-preserved original rather than re-backing-up, unless the hash actually differs.
+3. Verify the fresh cut is exactly 10.0s via `ffprobe` before overwriting the repo file.
+4. Check `git status` before assuming a commit is needed — an identical re-cut (same source + same timestamp) produces zero diff.
+
+### Baked-in default lineup (`48d6e45`) — the big milestone
+Implemented as a **versioned one-time migration** in `loadSlots()` (`js/app.js`), not just a fresh-install fallback: `DEFAULT_LINEUP_VERSION` (currently `1`) + a `DEFAULT_SLOTS` map, applied whenever the stored `storm-default-lineup-version` is behind the current version. This takes effect on **any** device on next load — including ones with leftover test data — without ever clobbering real customization made afterward. Verified via a simulated device with pre-existing junk and no version marker: migration applies once, stamps the version, a manual edit survives a later reload untouched. **To reset/replace the whole lineup again in the future** (e.g. next season), bump `DEFAULT_LINEUP_VERSION` and update `DEFAULT_SLOTS`.
+
+Baked-in order: Walkout 1 = "A Storm is Coming," Walkout 2 = "Let's Go," Victory = "Swagger Like Us"; lineup #1–#12 = jersey #45, #5, #99, #12, #13, #11, #68, #7, #29, #4, #15, #2.
 
 ## Gap-analysis conversation (2026-07-25)
 Jason asked directly what's missing / what to improve. Findings and his calls on each:
@@ -86,22 +110,22 @@ No longer "set once, Clear between games." Now: bake in the full permanent roste
 
 ## Pending (gated on Jason)
 - Rename "WALKOUT 1" / "WALKOUT 2" → "TEAM 1" / "TEAM 2" once Jason confirms on his phone that Owen's entry is showing up live. **Still not confirmed.**
+- Two possible spelling typos, flagged but not confirmed — used as-given until Jason says otherwise: "Kameren **Maldonoldo**" (possibly "Maldonado") and "Sam **Va Tassel**" (possibly "VanTassel"/"Van Tassel"). Fix is a simple `roster.json` name-field edit if/when confirmed.
 
 ## Current state
-- Everything committed and pushed to `origin/main` through `1df79ee`.
-- `roster.json` still has 3 entries (Owen Ackerman #7, "Let's Go," "A Storm is Coming") — the rest of the team's songs haven't been compiled yet.
-- `CACHE_NAME` is `storm-cache-v6`.
+- Everything committed and pushed to `origin/main` through `f1d9c87`.
+- **Roster complete:** all 12 kids loaded (Owen #7, Bobby Youmans #45, Kayden Lyons #5, Jaxsen Rodriguez #99, Dom Diaz #12, Jake Harris #13, Kameren Maldonoldo #11, Caleb Gingras #68, Ethan Ladanyi #29, Liam Pichardo #2, Sam Va Tassel #4, Manson Frank #15) + 6 team songs (Let's Go, A Storm is Coming, Swagger Like Us, All I Do Is Win, Bring Em Out, Black and Yellow — only the first three assigned to slots by default).
+- The real batting order is baked in as the actual default lineup (see above) — not just documented, it's live in the code.
+- `CACHE_NAME` is `storm-cache-v24`.
 - Push cadence: Jason wants changes committed AND pushed after each round of work, not batched up.
 
-## Not yet field-tested on Jason's actual phone (automation-verified only) — he said "I'll test" at the end of this session
-- Select-then-confirm playback + the pencil/Edit button.
-- Long-press drag-to-reorder — does the ~500ms threshold and blue ring feel right on a real touchscreen?
-- The doubled (112px) action bar.
-- Auto-advance, both the natural-finish case and the manual-Stop case.
-- The new Settings section / Advance-on-Stop switch.
+## Field-testing status (updated 2026-08-02 evening)
+Jason was actively testing live on his own phone throughout this session — that's how the `.selected` CSS bug got caught and how the Stop-vs-advance behavior got settled into the ADV switch. Playback selection, the Edit button, and the Advance-on-Stop switch have real live-device exposure with real bugs already found and fixed. **Still not explicitly confirmed:** whether the ~500ms long-press threshold and blue drag-ring feel right for drag-to-reorder on a real touchscreen, and whether the 112px action bar looks right in daylight/at a field.
 
 ## Open items / next steps
-- Jason is about to compile the rest of the kids' walk-up songs (jersey #, name, MP3, start timestamp, intended batting slot).
-- Once that data's in: load everyone into `roster.json` (same trim rule: players → 10s+fade from a specified timestamp, team songs → untouched) **and pre-seed that exact slot arrangement as the actual default `slots` state**, so a fresh install already shows the real batting order instead of empty tiles.
+- The roster/default-lineup build-out is done — this is steady-state confirmation now, not a build phase.
+- Confirm the baked-in lineup shows up correctly on both Jason's and the other parent's phones.
+- Confirm or correct the two flagged possible name typos.
+- Confirm drag-to-reorder feel and action-bar sizing live, if not already done.
 - Rename Walkout 1/2 → Team 1/Team 2 once confirmed live.
 - Screen wake lock still not field-tested during a real game.
