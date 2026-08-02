@@ -241,7 +241,13 @@ body {
   max-height: 100dvh;
   height: 100dvh;
   border-radius: 0;
-  padding-top: calc(env(safe-area-inset-top) + 16px);
+  /* Guarantee real clearance under the status bar regardless of whether
+     env(safe-area-inset-top) is actually resolving correctly on the device —
+     max() picks whichever is bigger, so a legitimately larger safe area
+     (e.g. landscape, other devices) still gets respected, but there's a
+     hard floor of 100px either way. The roster list below is a flex/scroll
+     region, so it just shrinks to make room — nothing gets cut off. */
+  padding-top: max(calc(env(safe-area-inset-top) + 16px), 100px);
 }
 
 .sheet-header {

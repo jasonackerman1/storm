@@ -1,4 +1,4 @@
-var CACHE_NAME = 'storm-cache-v24';
+var CACHE_NAME = 'storm-cache-v25';
 var NETWORK_FIRST_FILES = ['./', './index.html', './css/style.css', './js/app.js', './manifest.json', './roster.json'];
 
 var SHELL_FILES = [
@@ -64,8 +64,15 @@ self.addEventListener('fetch', function (event) {
     // Shell + roster.json: always try the network first so new deploys (new
     // roster entries, code changes) show up immediately. Cache is only the
     // offline fallback.
+    //
+    // { cache: 'no-store' } here is load-bearing — without it, fetch() can be
+    // silently satisfied by the browser's own HTTP cache instead of a real
+    // network round-trip, which defeats "network-first" entirely and can
+    // make a genuinely new deploy look identical to a stale one. Using the
+    // URL string (not event.request directly) avoids fetch() rejecting the
+    // override due to a mode/credentials mismatch on the original request.
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request.url, { cache: 'no-store' })
         .then(function (response) {
           if (response && response.ok) {
             var copy = response.clone();
