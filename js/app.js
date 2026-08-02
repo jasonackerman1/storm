@@ -7,6 +7,20 @@
   var STORE = 'players';
   var SLOTS_KEY = 'storm-slots-v2';
   var STOP_ADVANCES_KEY = 'storm-stop-advances';
+  var DEFAULT_LINEUP_VERSION_KEY = 'storm-default-lineup-version';
+
+  // The real, current batting order — bump DEFAULT_LINEUP_VERSION whenever
+  // this changes so it gets applied once on every device (even ones with
+  // leftover state from earlier testing), without ever clobbering whatever
+  // customizing (reorders/reassignments) happens afterward.
+  var DEFAULT_LINEUP_VERSION = 1;
+  var DEFAULT_SLOTS = {
+    sp1: 't-stormiscoming',
+    sp2: 't-letsgo',
+    sp3: 't-swaggerlikeus',
+    l1: 'p45', l2: 'p5', l3: 'p99', l4: 'p12', l5: 'p13', l6: 'p11',
+    l7: 'p68', l8: 'p7', l9: 'p29', l10: 'p4', l11: 'p15', l12: 'p2'
+  };
 
   var SLOT_DEFS = [
     { id: 'sp1', tag: 'WALKOUT 1', kind: 'special' },
@@ -87,6 +101,25 @@
   function loadSlots() {
     var result = {};
     SLOT_DEFS.forEach(function (def) { result[def.id] = null; });
+
+    var storedVersion = 0;
+    try {
+      storedVersion = parseInt(localStorage.getItem(DEFAULT_LINEUP_VERSION_KEY), 10) || 0;
+    } catch (e) {}
+
+    if (storedVersion < DEFAULT_LINEUP_VERSION) {
+      SLOT_DEFS.forEach(function (def) {
+        if (Object.prototype.hasOwnProperty.call(DEFAULT_SLOTS, def.id)) {
+          result[def.id] = DEFAULT_SLOTS[def.id];
+        }
+      });
+      try {
+        localStorage.setItem(SLOTS_KEY, JSON.stringify(result));
+        localStorage.setItem(DEFAULT_LINEUP_VERSION_KEY, String(DEFAULT_LINEUP_VERSION));
+      } catch (e) {}
+      return result;
+    }
+
     try {
       var raw = localStorage.getItem(SLOTS_KEY);
       if (raw) {
