@@ -2,6 +2,7 @@
   { "id": "p7", "number": "7", "name": "Owen Ackerman", "file": "mp3/7-owen-ackerman.mp3" },
   { "id": "p45", "number": "45", "name": "Bobby Youmans", "file": "mp3/45-bobby-youmans.mp3" },
   { "id": "p5", "number": "5", "name": "Kayden Lyons", "file": "mp3/5-kayden-lyons.mp3" },
+  { "id": "p99", "number": "99", "name": "Jaxsen Rodriguez", "file": "mp3/99-jaxsen-rodriguez.mp3" },
   { "id": "t-letsgo", "name": "Let's Go (Trick Daddy)", "file": "mp3/trick-daddy-lets-go.mp3" },
   { "id": "t-stormiscoming", "name": "A Storm is Coming", "file": "mp3/a-storm-is-coming.mp3" }
 ]
