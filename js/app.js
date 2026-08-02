@@ -561,19 +561,6 @@
     document.getElementById('action-play').addEventListener('click', toggleActionPlay);
     document.getElementById('action-edit').addEventListener('click', openEditForSelected);
 
-    document.getElementById('btn-clear-lineup').addEventListener('click', function () {
-      if (!confirm('Clear all 12 lineup slots for a new game? (Walkout/Victory songs will stay assigned.)')) return;
-      var playingDef = currentPlayingSlot ? findSlotDef(currentPlayingSlot) : null;
-      SLOT_DEFS.filter(function (d) { return d.kind === 'lineup'; }).forEach(function (d) {
-        slots[d.id] = null;
-      });
-      saveSlots();
-      if (playingDef && playingDef.kind === 'lineup') stopPlayback();
-      clampSelection();
-      renderGrid();
-      updateActionBar();
-    });
-
     document.getElementById('btn-manage-team').addEventListener('click', function () {
       renderManageList();
       showSheet('manage-team');
