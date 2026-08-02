@@ -1,6 +1,6 @@
 # Storm — Project Status
 
-_Last updated: 2026-08-02 (evening)_
+_Last updated: 2026-08-02 (late evening)_
 
 ## What it is
 An offline-first PWA for playing walk-up songs at Storm baseball games. Installed to the iPhone home screen via GitHub Pages (`github.com/jasonackerman1/storm`); works with no signal at the field once installed and opened once with internet.
@@ -105,6 +105,14 @@ Colors sampled directly from `storm_logo.jpg` (768×170px source): black `#00000
 ## CSS cascade-order lesson (bit twice this session — 2026-08-02)
 `.selected`, `.dragging`, `.playing`, `.filled` all have equal CSS specificity (two classes each). When a rule is declared *later* in the stylesheet, it wins any tie for properties both rules set — no partial merging. Both `.dragging` (vs. `.playing`) and `.selected` (vs. `.filled`) were originally declared too early and silently lost that tie, so the "more special" state rendered as if it were the plain one. Jason caught the `.selected` case live on his phone. **Going forward: any new state class that can stack with an existing one must be declared after it in the file, and verify with `getComputedStyle()` — not just a screenshot — that it actually took effect.**
 
+## Manage Team sheet rendering above the status bar (2026-08-02 late evening, `eb44799` + `dc1b2f9`)
+Jason reported the Manage Team full-screen sheet's header/close-X rendering underneath the iPhone status bar, completely unreachable — only fix was force-quitting. Two-stage response:
+1. First attempt: hypothesized iOS Safari's `100vh` (measures a taller "maximum possible" viewport than what's visible) was pushing the sheet's top edge above-screen. Added `100dvh` after the `vh` fallback.
+2. **Jason reported zero change**, even after a hard restart. This surfaced two things: (a) a phone restart does **not** clear a PWA's site data/service worker cache — so it's unclear the fix had even reached the device; (b) a real gap in `sw.js` — the "network-first" fetch never forced `{ cache: 'no-store' }`, so it could be silently served from the browser's own HTTP cache instead of a real network hit, quietly defeating "network-first." Fixed by fetching `event.request.url` with an explicit no-store mode.
+3. **Per Jason's own suggested fix**, also added a hard floor: `.sheet-full`'s `padding-top` is now `max(calc(env(safe-area-inset-top) + 16px), 100px)` — guarantees 100px of clearance regardless of whether the safe-area calc is behaving correctly. Roster list below is a flex/scroll region, shrinks to make room.
+- **Not yet confirmed live.** Given the caching confusion, the reliable way to test is deleting the home-screen icon and reinstalling fresh — not a restart, not just reopening.
+- **Lesson:** a device restart ≠ clearing PWA cache. If a fix "didn't seem to work at all," check whether it actually reached the device before re-diagnosing.
+
 ## Jason's expected usage pattern — UPDATED 2026-08-02
 No longer "set once, Clear between games." Now: bake in the full permanent roster (12 kids in batting order + both Walkout songs + Victory) as the shipped default, tweak day-of via drag-reorder, and only use gear/pencil for actual roster changes (kid added/removed/subbed). Two parents share day-to-day operation — Jason plus another parent currently on BallparkDJ, moving over once this app is further along.
 
@@ -113,16 +121,17 @@ No longer "set once, Clear between games." Now: bake in the full permanent roste
 - Two possible spelling typos, flagged but not confirmed — used as-given until Jason says otherwise: "Kameren **Maldonoldo**" (possibly "Maldonado") and "Sam **Va Tassel**" (possibly "VanTassel"/"Van Tassel"). Fix is a simple `roster.json` name-field edit if/when confirmed.
 
 ## Current state
-- Everything committed and pushed to `origin/main` through `f1d9c87`.
+- Everything committed and pushed to `origin/main` through `dc1b2f9`.
 - **Roster complete:** all 12 kids loaded (Owen #7, Bobby Youmans #45, Kayden Lyons #5, Jaxsen Rodriguez #99, Dom Diaz #12, Jake Harris #13, Kameren Maldonoldo #11, Caleb Gingras #68, Ethan Ladanyi #29, Liam Pichardo #2, Sam Va Tassel #4, Manson Frank #15) + 6 team songs (Let's Go, A Storm is Coming, Swagger Like Us, All I Do Is Win, Bring Em Out, Black and Yellow — only the first three assigned to slots by default).
 - The real batting order is baked in as the actual default lineup (see above) — not just documented, it's live in the code.
-- `CACHE_NAME` is `storm-cache-v24`.
+- `CACHE_NAME` is `storm-cache-v25`.
 - Push cadence: Jason wants changes committed AND pushed after each round of work, not batched up.
 
 ## Field-testing status (updated 2026-08-02 evening)
 Jason was actively testing live on his own phone throughout this session — that's how the `.selected` CSS bug got caught and how the Stop-vs-advance behavior got settled into the ADV switch. Playback selection, the Edit button, and the Advance-on-Stop switch have real live-device exposure with real bugs already found and fixed. **Still not explicitly confirmed:** whether the ~500ms long-press threshold and blue drag-ring feel right for drag-to-reorder on a real touchscreen, and whether the 112px action bar looks right in daylight/at a field.
 
 ## Open items / next steps
+- **Immediate:** confirm the Manage Team status-bar/close-button fix actually works, after a full delete-and-reinstall of the PWA (not a restart). If still broken after a genuinely fresh install, the fixes above were the wrong theory — needs fresh diagnosis, don't just re-apply the same fix.
 - The roster/default-lineup build-out is done — this is steady-state confirmation now, not a build phase.
 - Confirm the baked-in lineup shows up correctly on both Jason's and the other parent's phones.
 - Confirm or correct the two flagged possible name typos.
