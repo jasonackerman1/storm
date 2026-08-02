@@ -1,6 +1,6 @@
 # Storm — Project Status
 
-_Last updated: 2026-08-02 (late evening)_
+_Last updated: 2026-08-03_
 
 ## What it is
 An offline-first PWA for playing walk-up songs at Storm baseball games. Installed to the iPhone home screen via GitHub Pages (`github.com/jasonackerman1/storm`); works with no signal at the field once installed and opened once with internet.
@@ -113,6 +113,12 @@ Jason reported the Manage Team full-screen sheet's header/close-X rendering unde
 - **Not yet confirmed live.** Given the caching confusion, the reliable way to test is deleting the home-screen icon and reinstalling fresh — not a restart, not just reopening.
 - **Lesson:** a device restart ≠ clearing PWA cache. If a fix "didn't seem to work at all," check whether it actually reached the device before re-diagnosing.
 
+## Audio quality pass (2026-08-02/03, `90b1adc`, `09dff91`, `a5cf761`)
+- **Dead-air trim:** measured leading silence with `ffmpeg silencedetect` on the 8 songs that started at 0:00 or were left full-length — found real gaps from 0.25s up to 1.48s (on "A Storm is Coming," the live Walkout 1 song). Player clips got their cut shifted forward; team songs got just the leading silence clipped, full length otherwise (first exception to "team songs stay untouched," Jason approved). "Swagger Like Us" was already clean. Every result re-verified with a second silencedetect pass.
+- **Refresh App Content button:** new Settings button that forces a real re-download of everything, even already-cached files — built so Jason has an easy way to confirm a fix landed instead of deleting/reinstalling the app. Safe by design (never deletes the cache bucket up front, only overwrites via a fresh SW install). Doesn't touch the lineup/settings. Also fixed the same missing-`cache:'no-store'` gap in two more `sw.js` spots (install precache, cache-first background refresh) found while building this.
+- **Loudness normalization, all 18 songs:** measured `mean_volume` first — ranged wildly from -9.7dB to **-30.4dB** (Kameren Maldonoldo's track was a massive outlier). Applied real two-pass EBU R128 `loudnorm` (target -11 LUFS, -1.0 dBTP ceiling) to every file. Spread tightened to -11.3dB to -16.7dB. Kameren's track is still the quietest even after the biggest correction — its source has less headroom than the others, so the peak ceiling limits it; flagged to Jason rather than pushed further via heavier compression without asking. All originals backed up first.
+- **Real bug caught mid-task:** `echo "$json"` was silently mangling ffmpeg's JSON output for files whose metadata contained backslash-escape-like text, corrupting value extraction — 2 of 18 failed visibly, but the same bug could have silently produced wrong-but-valid numbers on any of the other 16. Fixed with `printf` instead of `echo`, and **re-ran the entire 18-file batch**, not just the two visible failures, since a silent-corruption bug can't be trusted to have only affected the files where it happened to be loud about it.
+
 ## Jason's expected usage pattern — UPDATED 2026-08-02
 No longer "set once, Clear between games." Now: bake in the full permanent roster (12 kids in batting order + both Walkout songs + Victory) as the shipped default, tweak day-of via drag-reorder, and only use gear/pencil for actual roster changes (kid added/removed/subbed). Two parents share day-to-day operation — Jason plus another parent currently on BallparkDJ, moving over once this app is further along.
 
@@ -121,18 +127,21 @@ No longer "set once, Clear between games." Now: bake in the full permanent roste
 - Two possible spelling typos, flagged but not confirmed — used as-given until Jason says otherwise: "Kameren **Maldonoldo**" (possibly "Maldonado") and "Sam **Va Tassel**" (possibly "VanTassel"/"Van Tassel"). Fix is a simple `roster.json` name-field edit if/when confirmed.
 
 ## Current state
-- Everything committed and pushed to `origin/main` through `dc1b2f9`.
+- Everything committed and pushed to `origin/main` through `a5cf761`.
 - **Roster complete:** all 12 kids loaded (Owen #7, Bobby Youmans #45, Kayden Lyons #5, Jaxsen Rodriguez #99, Dom Diaz #12, Jake Harris #13, Kameren Maldonoldo #11, Caleb Gingras #68, Ethan Ladanyi #29, Liam Pichardo #2, Sam Va Tassel #4, Manson Frank #15) + 6 team songs (Let's Go, A Storm is Coming, Swagger Like Us, All I Do Is Win, Bring Em Out, Black and Yellow — only the first three assigned to slots by default).
 - The real batting order is baked in as the actual default lineup (see above) — not just documented, it's live in the code.
-- `CACHE_NAME` is `storm-cache-v25`.
+- All 18 songs are dead-air-trimmed and loudness-normalized (see above).
+- A "Refresh App Content" button exists in Settings for forcing a genuine re-download.
+- `CACHE_NAME` is `storm-cache-v28`.
 - Push cadence: Jason wants changes committed AND pushed after each round of work, not batched up.
 
 ## Field-testing status (updated 2026-08-02 evening)
 Jason was actively testing live on his own phone throughout this session — that's how the `.selected` CSS bug got caught and how the Stop-vs-advance behavior got settled into the ADV switch. Playback selection, the Edit button, and the Advance-on-Stop switch have real live-device exposure with real bugs already found and fixed. **Still not explicitly confirmed:** whether the ~500ms long-press threshold and blue drag-ring feel right for drag-to-reorder on a real touchscreen, and whether the 112px action bar looks right in daylight/at a field.
 
 ## Open items / next steps
-- **Immediate:** confirm the Manage Team status-bar/close-button fix actually works, after a full delete-and-reinstall of the PWA (not a restart). If still broken after a genuinely fresh install, the fixes above were the wrong theory — needs fresh diagnosis, don't just re-apply the same fix.
-- The roster/default-lineup build-out is done — this is steady-state confirmation now, not a build phase.
+- **Immediate, still unresolved:** confirm the Manage Team status-bar/close-button fix actually works, after a full delete-and-reinstall (not a restart) — Jason has not reported back on this yet, he moved on to the audio-quality work instead. The new Refresh App Content button is now the easy way to check any fix without a full reinstall.
+- Have Jason listen through the loudness-normalized songs on a real device speaker to confirm they actually sound consistent, not just correct on paper.
+- The roster/default-lineup/audio-quality build-out is done — this is steady-state confirmation now, not a build phase.
 - Confirm the baked-in lineup shows up correctly on both Jason's and the other parent's phones.
 - Confirm or correct the two flagged possible name typos.
 - Confirm drag-to-reorder feel and action-bar sizing live, if not already done.
