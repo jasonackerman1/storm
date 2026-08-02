@@ -229,7 +229,20 @@ body {
   overflow: hidden;
 }
 
-.sheet-full { max-height: 100vh; height: 100vh; border-radius: 0; padding-top: calc(env(safe-area-inset-top) + 16px); }
+.sheet-full {
+  max-height: 100vh;
+  height: 100vh;
+  /* iOS Safari's 100vh historically measures a taller "maximum possible"
+     viewport instead of the actual visible one, which can push this sheet's
+     header (and the close button) up above the status bar, out of reach.
+     100dvh reflects the real visible viewport on current iOS — declared
+     after the vh fallback so older engines that don't understand dvh just
+     ignore it and keep the vh value. */
+  max-height: 100dvh;
+  height: 100dvh;
+  border-radius: 0;
+  padding-top: calc(env(safe-area-inset-top) + 16px);
+}
 
 .sheet-header {
   display: flex;
