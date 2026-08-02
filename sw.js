@@ -1,4 +1,4 @@
-var CACHE_NAME = 'storm-cache-v26';
+var CACHE_NAME = 'storm-cache-v27';
 var NETWORK_FIRST_FILES = ['./', './index.html', './css/style.css', './js/app.js', './manifest.json', './roster.json'];
 
 var SHELL_FILES = [
@@ -25,7 +25,12 @@ self.addEventListener('install', function (event) {
         return caches.open(CACHE_NAME).then(function (cache) {
           return Promise.all(
             allFiles.map(function (url) {
-              return cache.add(url).catch(function (err) {
+              // cache.add(url) alone doesn't force a real network hit — it can
+              // be silently satisfied by the browser's own HTTP cache, same
+              // gap as the runtime fetch handler below. no-store here is what
+              // actually guarantees a fresh precache, not just a fresh cache
+              // *bucket*.
+              return cache.add(new Request(url, { cache: 'no-store' })).catch(function (err) {
                 console.warn('Storm SW: could not precache', url, err);
               });
             })
@@ -88,7 +93,7 @@ self.addEventListener('fetch', function (event) {
   // Everything else (mp3s, icons): cache-first, refresh cache in background.
   event.respondWith(
     caches.match(event.request).then(function (cached) {
-      var networkFetch = fetch(event.request)
+      var networkFetch = fetch(event.request.url, { cache: 'no-store' })
         .then(function (response) {
           if (response && response.ok) {
             var copy = response.clone();

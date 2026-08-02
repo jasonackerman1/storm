@@ -332,6 +332,11 @@ body {
 
 .settings-section h3 { margin: 0 0 10px 0; font-size: 1rem; color: var(--text-dim); }
 
+.refresh-btn { margin-top: 14px; }
+.refresh-btn:disabled { opacity: 0.6; }
+
+.settings-section .form-hint { margin: 8px 2px 0 2px; }
+
 .settings-row {
   display: flex;
   align-items: center;

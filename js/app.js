@@ -603,6 +603,30 @@
       saveStopAdvancesSetting();
     });
 
+    document.getElementById('btn-refresh-content').addEventListener('click', function () {
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Refreshing…';
+      // Deliberately does NOT delete the current cache bucket up front — that
+      // would risk leaving the app with zero offline content if the network
+      // fails partway through. Instead: unregister so the next load does a
+      // completely fresh service worker registration, whose install step
+      // re-fetches everything with cache: 'no-store' into the SAME cache
+      // bucket, overwriting entries as fresh fetches succeed. Anything that
+      // fails to fetch (e.g. mid-refresh signal drop) just keeps whatever
+      // was already cached rather than being wiped. Doesn't touch the
+      // lineup/settings in localStorage — only app code, roster, and songs.
+      var unregisterAll = ('serviceWorker' in navigator)
+        ? navigator.serviceWorker.getRegistrations().then(function (regs) {
+            return Promise.all(regs.map(function (r) { return r.unregister(); }));
+          }).catch(function () {})
+        : Promise.resolve();
+
+      unregisterAll.then(function () {
+        window.location.reload();
+      });
+    });
+
     document.getElementById('assign-clear-slot').addEventListener('click', function () {
       if (currentAssignSlot == null) return;
       slots[currentAssignSlot] = null;
