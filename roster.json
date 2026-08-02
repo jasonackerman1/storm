@@ -13,5 +13,7 @@
   { "id": "p15", "number": "15", "name": "Manson Frank", "file": "mp3/15-manson-frank.mp3" },
   { "id": "t-letsgo", "name": "Let's Go (Trick Daddy)", "file": "mp3/trick-daddy-lets-go.mp3" },
   { "id": "t-stormiscoming", "name": "A Storm is Coming", "file": "mp3/a-storm-is-coming.mp3" },
-  { "id": "t-swaggerlikeus", "name": "Swagger Like Us", "file": "mp3/swagger like us.mp3" }
+  { "id": "t-swaggerlikeus", "name": "Swagger Like Us", "file": "mp3/swagger like us.mp3" },
+  { "id": "t-allidoiswin", "name": "All I Do Is Win", "file": "mp3/all-i-do-is-win.mp3" },
+  { "id": "t-bringemout", "name": "Bring Em Out", "file": "mp3/bring-em-out.mp3" }
 ]
