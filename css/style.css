@@ -71,6 +71,12 @@ body {
   font-weight: 600;
 }
 
+.icon-btn.toggle-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1200;
+}
+
 .icon-btn:active { background: rgba(248,176,0,0.22); }
 
 .lineup-grid {

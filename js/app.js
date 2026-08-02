@@ -6,6 +6,7 @@
   var DB_VERSION = 1;
   var STORE = 'players';
   var SLOTS_KEY = 'storm-slots-v2';
+  var STOP_ADVANCES_KEY = 'storm-stop-advances';
 
   var SLOT_DEFS = [
     { id: 'sp1', tag: 'WALKOUT 1', kind: 'special' },
@@ -24,6 +25,7 @@
   var currentAssignSlot = null;
   var selectedSlot = null;
   var dragState = null;
+  var stopAdvancesEnabled = false;
   var objectUrlCache = new Map();
 
   var LINEUP_IDS = SLOT_DEFS.filter(function (d) { return d.kind === 'lineup'; })
@@ -103,6 +105,18 @@
     localStorage.setItem(SLOTS_KEY, JSON.stringify(slots));
   }
 
+  function loadStopAdvancesSetting() {
+    try {
+      return localStorage.getItem(STOP_ADVANCES_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function saveStopAdvancesSetting() {
+    localStorage.setItem(STOP_ADVANCES_KEY, stopAdvancesEnabled ? '1' : '0');
+  }
+
   function rebuildLibrary() {
     library = bundledPlayers.concat(localPlayers).sort(function (a, b) {
       return (Number(a.number) || 0) - (Number(b.number) || 0);
@@ -157,7 +171,14 @@
     // Tapping Play again on the slot that's already playing stops it and
     // rewinds to the start — the next Play always starts fresh from the top.
     if (currentPlayingSlot === selectedSlot) {
+      var stoppedSlot = selectedSlot;
       stopPlayback();
+      // Whether a manual Stop counts as "that batter's at-bat is over" (and
+      // should advance) vs. "I stopped it early" (and shouldn't) is a real
+      // judgment call that depends on live-game feel — the ADV toggle in
+      // the header lets that be decided/changed on the fly instead of
+      // baked in as one fixed behavior.
+      if (stopAdvancesEnabled) advanceToNextLineupSlot(stoppedSlot);
     } else {
       firePlayback(selectedSlot);
     }
@@ -168,6 +189,15 @@
   function openEditForSelected() {
     if (!selectedSlot) return;
     openAssignSheet(selectedSlot);
+  }
+
+  function updateStopAdvanceButton() {
+    var btn = document.getElementById('btn-stop-advance');
+    if (!btn) return;
+    btn.classList.toggle('toggle-on', stopAdvancesEnabled);
+    btn.title = stopAdvancesEnabled
+      ? 'Stop also advances to next batter (tap to turn off)'
+      : 'Stop does not advance (tap to turn on)';
   }
 
   // A song that finishes on its own (not manually stopped) means that
@@ -549,6 +579,12 @@
       showSheet('manage-team');
     });
 
+    document.getElementById('btn-stop-advance').addEventListener('click', function () {
+      stopAdvancesEnabled = !stopAdvancesEnabled;
+      saveStopAdvancesSetting();
+      updateStopAdvanceButton();
+    });
+
     document.getElementById('assign-clear-slot').addEventListener('click', function () {
       if (currentAssignSlot == null) return;
       slots[currentAssignSlot] = null;
@@ -606,6 +642,7 @@
   // ---------- Init ----------
   function init() {
     slots = loadSlots();
+    stopAdvancesEnabled = loadStopAdvancesSetting();
 
     fetch('roster.json', { cache: 'no-store' })
       .then(function (res) { return res.ok ? res.json() : []; })
@@ -630,6 +667,7 @@
         renderManageList();
         bindEvents();
         updateActionBar();
+        updateStopAdvanceButton();
         registerServiceWorker();
         bindWakeLock();
       });
