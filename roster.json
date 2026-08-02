@@ -12,5 +12,6 @@
   { "id": "p4", "number": "4", "name": "Sam Va Tassel", "file": "mp3/4-sam-va-tassel.mp3" },
   { "id": "p15", "number": "15", "name": "Manson Frank", "file": "mp3/15-manson-frank.mp3" },
   { "id": "t-letsgo", "name": "Let's Go (Trick Daddy)", "file": "mp3/trick-daddy-lets-go.mp3" },
-  { "id": "t-stormiscoming", "name": "A Storm is Coming", "file": "mp3/a-storm-is-coming.mp3" }
+  { "id": "t-stormiscoming", "name": "A Storm is Coming", "file": "mp3/a-storm-is-coming.mp3" },
+  { "id": "t-swaggerlikeus", "name": "Swagger Like Us", "file": "mp3/swagger like us.mp3" }
 ]
