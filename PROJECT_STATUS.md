@@ -1,6 +1,6 @@
 # Storm — Project Status
 
-_Last updated: 2026-07-25_
+_Last updated: 2026-08-02_
 
 ## What it is
 An offline-first PWA for playing walk-up songs at Storm baseball games. Installed to the iPhone home screen via GitHub Pages (`github.com/jasonackerman1/storm`); works with no signal at the field once installed and opened once with internet.
@@ -26,6 +26,15 @@ An offline-first PWA for playing walk-up songs at Storm baseball games. Installe
 13. **`98ec0c4`** (2026-07-25) — Fixed lingering red-stroke complaint (stale service-worker cache, not a code bug) and tightened bolt spacing in the wordmark. `CACHE_NAME` → v4.
 14. **`9f752da`** (2026-07-25) — Jason provided a clean isolated `tornado.png`; replaced the lightning bolt with it as the header O and regenerated the app icon set. Removed `lightning.svg`. `CACHE_NAME` → v5.
 15. **`d651a0c`** (2026-07-25) — Jason provided the full official wordmark (`storm-wordmark.png`); replaced the hand-composited header markup with this single authentic image. App icon stays tornado-only (square). `CACHE_NAME` → v6.
+
+### Session of 2026-08-02 — interaction overhaul, inspired by BallparkDJ (the other parent's app)
+16. **`ad19ad4`** — Select-then-confirm playback: tap a slot to select it (glowing ring), a bottom action bar's full-width Play/Stop button actually fires/stops audio. Long-press a lineup slot (not Walkout/Victory) to drag-and-reorder it — true insert-with-bump, not a two-slot swap. Pencil/Edit button replaces the old press-and-hold-to-reassign gesture.
+17. **`f21df89`** — First pass at distinct visual states (thicker selected ring, blue dragging ring) + attempted haptic vibration on drag pickup (no-op on iOS — no Vibration API there).
+18. **`9ec6ccd`** — Real fix for `.selected` never actually rendering: it was declared before `.filled` in the stylesheet, so at equal CSS specificity `.filled` (declared later) silently won the tie for every property. Jason caught this live on his phone. Fixed by reordering the CSS and verifying with `getComputedStyle()`, not just a screenshot.
+19. **`b37a4b7`** — Doubled the action bar height (56px → 112px) + built auto-advance-to-next-batter: when a song finishes on its own, selection jumps to the next filled lineup slot (skips empty, wraps #12→#1), unless the user already tapped ahead to a different slot.
+20. **`c51fa8c`** — Added an ADV header toggle for whether manual Stop also advances (default off at this point).
+21. **`86cadf7`** — Removed the Clear Lineup button — the team is moving to a permanently-populated roster where a full wipe never comes up.
+22. **`1df79ee`** — Replaced the ADV header button with a real switch in a new "Settings" section atop the Manage Team screen. Default flipped to ON for new installs.
 
 ## Gap-analysis conversation (2026-07-25)
 Jason asked directly what's missing / what to improve. Findings and his calls on each:
@@ -60,30 +69,39 @@ Colors sampled directly from `storm_logo.jpg` (768×170px source): black `#00000
 - **Slot cards:** look like the back of a baseball jersey. Once a lineup slot is filled: no pencil icon, no corner "#N" tag — just LASTNAME over a bigger number. Team-song slots (Walkout/Victory) keep their corner tag.
 - Verified with a temporary headless-Chrome + puppeteer-core script (removed after each verification, not committed).
 
-## Interaction model (current, as of `2862418`)
-- Tap an empty slot → opens the assign sheet.
-- Tap a filled, non-playing slot → plays that song from the beginning.
-- Tap the currently-playing slot again → stops it and rewinds to 0:00 (next tap starts fresh).
-- Tap a different slot while one is playing → stops the old one, starts the new one.
-- Press-and-hold (~500ms) any slot → opens the assign sheet to reassign.
+## Interaction model — REPLACED 2026-08-02, old tap-to-play model is gone
+- **Tap any filled slot → selects it** (thick glowing gold ring + warm background). Nothing plays until you confirm — a deliberate mis-tap safety step.
+- **Bottom action bar (112px tall):** pencil/Edit button (opens the assign sheet for the selected slot) + full-width Play/Stop button that actually fires/stops audio for the selected slot.
+- Tapping a different slot while one plays only changes the selection — it never touches the already-playing audio.
+- **Long-press (~500ms) a filled lineup slot (the 12 numbered ones only, not Walkout/Victory) → drag-to-reorder.** True insert-with-bump (move #1 to the #5 spot shifts 2-5 back by one). Shows a glowing blue ring while dragging.
+- **Auto-advance:** a song finishing on its own moves the selection to the next filled lineup slot (skips empty, wraps #12→#1) — unless the user already tapped ahead to something else.
+- **Advance on Stop switch** (gear icon → Manage Team → new "Settings" section above the roster): controls whether a *manual* Stop also advances. Defaults ON for new installs. Built as a switch specifically because Jason wasn't sure which behavior is right without live-game testing.
+- **Clear Lineup button — REMOVED.** The team's moving to a permanently-populated roster; a full wipe never comes up in practice.
 
-**Jason's expected usage pattern** (shared 2026-07-25, not yet field-tested): mostly set the lineup once and leave it, using "Clear Lineup" between games, with maybe one or two mid-game swaps via press-and-hold. The reassign path is for occasional use — clarity/no-accidental-triggers matters more than speed there.
+## CSS cascade-order lesson (bit twice this session — 2026-08-02)
+`.selected`, `.dragging`, `.playing`, `.filled` all have equal CSS specificity (two classes each). When a rule is declared *later* in the stylesheet, it wins any tie for properties both rules set — no partial merging. Both `.dragging` (vs. `.playing`) and `.selected` (vs. `.filled`) were originally declared too early and silently lost that tie, so the "more special" state rendered as if it were the plain one. Jason caught the `.selected` case live on his phone. **Going forward: any new state class that can stack with an existing one must be declared after it in the file, and verify with `getComputedStyle()` — not just a screenshot — that it actually took effect.**
+
+## Jason's expected usage pattern — UPDATED 2026-08-02
+No longer "set once, Clear between games." Now: bake in the full permanent roster (12 kids in batting order + both Walkout songs + Victory) as the shipped default, tweak day-of via drag-reorder, and only use gear/pencil for actual roster changes (kid added/removed/subbed). Two parents share day-to-day operation — Jason plus another parent currently on BallparkDJ, moving over once this app is further along.
 
 ## Pending (gated on Jason)
-- Rename "WALKOUT 1" / "WALKOUT 2" → "TEAM 1" / "TEAM 2" once Jason confirms on his phone that Owen's entry is showing up live. **Not yet confirmed.**
+- Rename "WALKOUT 1" / "WALKOUT 2" → "TEAM 1" / "TEAM 2" once Jason confirms on his phone that Owen's entry is showing up live. **Still not confirmed.**
 
 ## Current state
-- Everything committed and pushed to `origin/main` through `d651a0c`.
-- `roster.json` has 3 entries: Owen Ackerman (#7, cut to 10s+fade), "Let's Go" by Trick Daddy (team song for Walkout 2, full length ~3:42), and "A Storm is Coming" (team song for Walkout 1, full length ~4:56).
+- Everything committed and pushed to `origin/main` through `1df79ee`.
+- `roster.json` still has 3 entries (Owen Ackerman #7, "Let's Go," "A Storm is Coming") — the rest of the team's songs haven't been compiled yet.
 - `CACHE_NAME` is `storm-cache-v6`.
-- Branding (including the real official header wordmark logo), interaction redesign, and screen-wake-lock are all live.
 - Push cadence: Jason wants changes committed AND pushed after each round of work, not batched up.
 
+## Not yet field-tested on Jason's actual phone (automation-verified only) — he said "I'll test" at the end of this session
+- Select-then-confirm playback + the pencil/Edit button.
+- Long-press drag-to-reorder — does the ~500ms threshold and blue ring feel right on a real touchscreen?
+- The doubled (112px) action bar.
+- Auto-advance, both the natural-finish case and the manual-Stop case.
+- The new Settings section / Advance-on-Stop switch.
+
 ## Open items / next steps
-- Jason confirms the cache fix worked on his phone (may need a full quit + reopen, not just backgrounding).
-- Jason tries the press-and-hold reassign gesture live to confirm the ~500ms threshold feels right (only verified in headless browser so far).
-- Jason still needs to assign "Let's Go" to WALKOUT 2 and "A Storm is Coming" to WALKOUT 1 in the app itself.
-- Once cache fix confirmed: rename Walkout 1/2 → Team 1/Team 2.
-- Jason builds/shares the Google Doc and collects team song picks.
-- As MP3s arrive: name per convention → apply player-vs-team trim rule → update roster → commit → push.
-- Screen wake lock not yet field-tested during a real game (only verified error-free in headless testing).
+- Jason is about to compile the rest of the kids' walk-up songs (jersey #, name, MP3, start timestamp, intended batting slot).
+- Once that data's in: load everyone into `roster.json` (same trim rule: players → 10s+fade from a specified timestamp, team songs → untouched) **and pre-seed that exact slot arrangement as the actual default `slots` state**, so a fresh install already shows the real batting order instead of empty tiles.
+- Rename Walkout 1/2 → Team 1/Team 2 once confirmed live.
+- Screen wake lock still not field-tested during a real game.
