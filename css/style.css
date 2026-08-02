@@ -367,7 +367,7 @@ body {
 
 .action-edit-btn {
   flex: 0 0 56px;
-  height: 56px;
+  height: 112px;
   border-radius: 12px;
   background: rgba(248,176,0,0.1);
   border: 1px solid rgba(248,176,0,0.3);
@@ -381,7 +381,7 @@ body {
 
 .action-play-btn {
   flex: 1 1 auto;
-  height: 56px;
+  height: 112px;
   border: none;
   border-radius: 12px;
   font-weight: 800;

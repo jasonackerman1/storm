@@ -170,6 +170,19 @@
     openAssignSheet(selectedSlot);
   }
 
+  // A song that finishes on its own (not manually stopped) means that
+  // batter's at-bat is over — auto-select the next filled lineup slot so
+  // the next song is already queued up and Play is the only tap needed.
+  // Skips empty slots and wraps from #12 back to #1, same as a real order.
+  function advanceToNextLineupSlot(finishedSlotId) {
+    var idx = LINEUP_IDS.indexOf(finishedSlotId);
+    if (idx === -1) return; // Walkout/Victory have no "next batter" concept
+    for (var i = 1; i <= LINEUP_IDS.length; i++) {
+      var candidate = LINEUP_IDS[(idx + i) % LINEUP_IDS.length];
+      if (slots[candidate]) { selectedSlot = candidate; return; }
+    }
+  }
+
   function updateActionBar() {
     var playBtn = document.getElementById('action-play');
     var editBtn = document.getElementById('action-edit');
@@ -506,7 +519,11 @@
   // ---------- Static event bindings ----------
   function bindEvents() {
     document.getElementById('player-audio').addEventListener('ended', function () {
+      var finishedSlot = currentPlayingSlot;
       currentPlayingSlot = null;
+      // Only auto-advance if the user hasn't already tapped ahead to a
+      // different slot while this song was finishing out.
+      if (selectedSlot === finishedSlot) advanceToNextLineupSlot(finishedSlot);
       renderGrid();
       updateActionBar();
     });
