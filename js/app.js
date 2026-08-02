@@ -25,7 +25,7 @@
   var currentAssignSlot = null;
   var selectedSlot = null;
   var dragState = null;
-  var stopAdvancesEnabled = false;
+  var stopAdvancesEnabled = true;
   var objectUrlCache = new Map();
 
   var LINEUP_IDS = SLOT_DEFS.filter(function (d) { return d.kind === 'lineup'; })
@@ -107,9 +107,11 @@
 
   function loadStopAdvancesSetting() {
     try {
-      return localStorage.getItem(STOP_ADVANCES_KEY) === '1';
+      var raw = localStorage.getItem(STOP_ADVANCES_KEY);
+      if (raw === null) return true; // default: Stop also advances to next batter
+      return raw === '1';
     } catch (e) {
-      return false;
+      return true;
     }
   }
 
@@ -191,13 +193,10 @@
     openAssignSheet(selectedSlot);
   }
 
-  function updateStopAdvanceButton() {
-    var btn = document.getElementById('btn-stop-advance');
-    if (!btn) return;
-    btn.classList.toggle('toggle-on', stopAdvancesEnabled);
-    btn.title = stopAdvancesEnabled
-      ? 'Stop also advances to next batter (tap to turn off)'
-      : 'Stop does not advance (tap to turn on)';
+  function updateStopAdvanceSwitch() {
+    var el = document.getElementById('setting-stop-advance');
+    if (!el) return;
+    el.checked = stopAdvancesEnabled;
   }
 
   // A song that finishes on its own (not manually stopped) means that
@@ -566,10 +565,9 @@
       showSheet('manage-team');
     });
 
-    document.getElementById('btn-stop-advance').addEventListener('click', function () {
-      stopAdvancesEnabled = !stopAdvancesEnabled;
+    document.getElementById('setting-stop-advance').addEventListener('change', function (e) {
+      stopAdvancesEnabled = e.target.checked;
       saveStopAdvancesSetting();
-      updateStopAdvanceButton();
     });
 
     document.getElementById('assign-clear-slot').addEventListener('click', function () {
@@ -654,7 +652,7 @@
         renderManageList();
         bindEvents();
         updateActionBar();
-        updateStopAdvanceButton();
+        updateStopAdvanceSwitch();
         registerServiceWorker();
         bindWakeLock();
       });
