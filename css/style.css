@@ -51,15 +51,6 @@ body {
 
 .topbar-brand { display: flex; align-items: center; gap: 8px; }
 
-.topbar-age-group {
-  font-family: var(--jersey-font);
-  font-weight: 400;
-  font-size: 1.1rem;
-  letter-spacing: 0.03em;
-  color: var(--text);
-  -webkit-text-stroke: 0.5px var(--accent);
-}
-
 .topbar h1 { margin: 0; line-height: 0; }
 
 .topbar h1 .brand-logo {
