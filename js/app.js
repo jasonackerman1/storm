@@ -158,6 +158,34 @@
     });
   }
 
+  // Only bundled (roster.json) songs depend on the network/service-worker
+  // cache — phone-added songs live in IndexedDB and are always available
+  // offline regardless. This tells you whether a song could actually
+  // silently fail to play at the field before it happens, not after.
+  function checkOfflineCacheStatus() {
+    var el = document.getElementById('offline-status');
+    if (!el) return;
+    if (!('caches' in window) || bundledPlayers.length === 0) {
+      el.classList.remove('visible');
+      return;
+    }
+    var files = bundledPlayers.map(function (p) { return './' + p.file; });
+    Promise.all(files.map(function (url) {
+      return caches.match(url).then(function (res) { return !!res; }).catch(function () { return false; });
+    })).then(function (results) {
+      var total = results.length;
+      var cached = results.filter(Boolean).length;
+      el.classList.add('visible');
+      if (cached === total) {
+        el.textContent = 'All ' + total + ' songs ready offline';
+        el.className = 'offline-status visible offline-status-ok';
+      } else {
+        el.textContent = (total - cached) + ' of ' + total + ' songs not downloaded yet — connect to Wi-Fi and tap Refresh below';
+        el.className = 'offline-status visible offline-status-warn';
+      }
+    });
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -595,6 +623,7 @@
 
     document.getElementById('btn-manage-team').addEventListener('click', function () {
       renderManageList();
+      checkOfflineCacheStatus();
       showSheet('manage-team');
     });
 

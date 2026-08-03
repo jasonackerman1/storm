@@ -335,6 +335,32 @@ body {
 .refresh-btn { margin-top: 14px; }
 .refresh-btn:disabled { opacity: 0.6; }
 
+.offline-status {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text);
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.offline-status.visible { display: flex; }
+
+.offline-status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-dim);
+}
+
+.offline-status.offline-status-ok::before { background: #3ecf6e; }
+.offline-status.offline-status-warn::before { background: var(--danger); }
+
 .settings-section .form-hint { margin: 8px 2px 0 2px; }
 
 .settings-row {
