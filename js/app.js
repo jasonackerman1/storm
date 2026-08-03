@@ -488,13 +488,25 @@
   function renderManageList() {
     var list = document.getElementById('manage-player-list');
     list.innerHTML = '';
+    var query = (document.getElementById('manage-search').value || '').trim().toLowerCase();
+    var visible = query
+      ? library.filter(function (p) {
+          return p.name.toLowerCase().indexOf(query) !== -1 ||
+            (p.number && String(p.number).toLowerCase().indexOf(query) !== -1);
+        })
+      : library;
     if (library.length === 0) {
       var empty = document.createElement('div');
       empty.className = 'src-tag';
       empty.textContent = 'No songs yet — add one below.';
       list.appendChild(empty);
+    } else if (visible.length === 0) {
+      var noMatch = document.createElement('div');
+      noMatch.className = 'src-tag';
+      noMatch.textContent = 'No matches for "' + query + '".';
+      list.appendChild(noMatch);
     }
-    library.forEach(function (p) {
+    visible.forEach(function (p) {
       var row = document.createElement('div');
       row.className = 'manage-row';
       row.innerHTML = (p.number ? '<span class="num">' + escapeHtml(p.number) + '</span>' : '') +
@@ -628,9 +640,14 @@
     document.getElementById('action-edit').addEventListener('click', openEditForSelected);
 
     document.getElementById('btn-manage-team').addEventListener('click', function () {
+      document.getElementById('manage-search').value = '';
       renderManageList();
       checkOfflineCacheStatus();
       showSheet('manage-team');
+    });
+
+    document.getElementById('manage-search').addEventListener('input', function () {
+      renderManageList();
     });
 
     document.getElementById('setting-stop-advance').addEventListener('change', function (e) {

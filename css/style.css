@@ -439,6 +439,18 @@ body {
 }
 
 #new-player-number { width: 70px; text-align: center; }
+
+.manage-search {
+  display: block;
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text);
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
 #new-player-name { flex: 1; }
 
 .file-label {
