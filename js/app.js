@@ -591,6 +591,12 @@
         alert('Please fill in a name and choose a song file. (Jersey # is optional — leave it blank for team songs like Walkout or Victory.)');
         return;
       }
+      if (number) {
+        var dupe = library.filter(function (p) { return p.number && String(p.number) === number; })[0];
+        if (dupe && !confirm('Jersey #' + number + ' is already assigned to ' + dupe.name + '. Add "' + name + '" as well?')) {
+          return;
+        }
+      }
       var id = 'local-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
       idbPut({ id: id, number: number, name: name, blob: file }).then(function () {
         var url = URL.createObjectURL(file);
