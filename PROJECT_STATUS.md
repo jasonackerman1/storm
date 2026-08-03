@@ -119,6 +119,17 @@ Jason reported the Manage Team full-screen sheet's header/close-X rendering unde
 - **Loudness normalization, all 18 songs:** measured `mean_volume` first — ranged wildly from -9.7dB to **-30.4dB** (Kameren Maldonoldo's track was a massive outlier). Applied real two-pass EBU R128 `loudnorm` (target -11 LUFS, -1.0 dBTP ceiling) to every file. Spread tightened to -11.3dB to -16.7dB. Kameren's track is still the quietest even after the biggest correction — its source has less headroom than the others, so the peak ceiling limits it; flagged to Jason rather than pushed further via heavier compression without asking. All originals backed up first.
 - **Real bug caught mid-task:** `echo "$json"` was silently mangling ffmpeg's JSON output for files whose metadata contained backslash-escape-like text, corrupting value extraction — 2 of 18 failed visibly, but the same bug could have silently produced wrong-but-valid numbers on any of the other 16. Fixed with `printf` instead of `echo`, and **re-ran the entire 18-file batch**, not just the two visible failures, since a silent-corruption bug can't be trusted to have only affected the files where it happened to be loud about it.
 
+## "Analyze the app" pass (2026-08-03, `bd0f966`, `e4b9da3`, `f1f049d`, `76d9935`)
+Jason asked directly what could be better/more scalable. Read the actual current code first rather than answering from memory. Gave a prioritized list split into "worth fixing" vs. "deliberately not doing" — when pushed on "why not fix all of them," clarified the distinction and executed the four real ones:
+1. **Offline-cache status indicator** — Settings shows "All N songs ready offline" (green) or "X of N not downloaded yet" (amber), checked live against Cache Storage for bundled roster.json songs specifically (phone-added songs live in IndexedDB, always available regardless). Makes the app's core offline promise verifiable instead of assumed.
+2. **Committed smoke test** (`test/smoke.js`) — consolidates this session's ad hoc verification (select/play/stop, mis-tap safety, auto-advance, Advance-on-Stop, drag-reorder) into one reusable script. **Verified it actually has teeth before committing**: a first version didn't catch an intentionally-broken auto-advance line (an earlier test step accidentally covered for the break), fixed the flow to properly isolate that path, reconfirmed both a real pass and a real failure.
+3. **Duplicate jersey-number warning** — confirms with the existing player's name before adding a second one under the same number.
+4. **Manage Team search** — filters by name/number, resets on each open.
+- **Explicitly not done:** dynamic lineup size (not broken, no real need yet), modularizing `app.js`/build tooling (disproportionate for a 2-person tool), multi-device sync (already rejected in an earlier session, not relitigated).
+
+## Header logo iteration (2026-08-03, `f3d5cc2` → `0d4c4df` → `2b19d08`)
+Jason asked to center the logo + add "11U" on the left. Built as a 3-column grid (verified centered to 0px on a 390px viewport) — **he didn't like it**. Reverted to logo-left + "- 11U" inline. **Then asked to remove 11U entirely** ("trying to do too much"). Net result: three commits landing back at the original plain wordmark header. Normal, cheap design iteration — not a wasted round trip.
+
 ## Jason's expected usage pattern — UPDATED 2026-08-02
 No longer "set once, Clear between games." Now: bake in the full permanent roster (12 kids in batting order + both Walkout songs + Victory) as the shipped default, tweak day-of via drag-reorder, and only use gear/pencil for actual roster changes (kid added/removed/subbed). Two parents share day-to-day operation — Jason plus another parent currently on BallparkDJ, moving over once this app is further along.
 
@@ -127,21 +138,24 @@ No longer "set once, Clear between games." Now: bake in the full permanent roste
 - Two possible spelling typos, flagged but not confirmed — used as-given until Jason says otherwise: "Kameren **Maldonoldo**" (possibly "Maldonado") and "Sam **Va Tassel**" (possibly "VanTassel"/"Van Tassel"). Fix is a simple `roster.json` name-field edit if/when confirmed.
 
 ## Current state
-- Everything committed and pushed to `origin/main` through `a5cf761`.
+- Everything committed and pushed to `origin/main` through `2b19d08`.
 - **Roster complete:** all 12 kids loaded (Owen #7, Bobby Youmans #45, Kayden Lyons #5, Jaxsen Rodriguez #99, Dom Diaz #12, Jake Harris #13, Kameren Maldonoldo #11, Caleb Gingras #68, Ethan Ladanyi #29, Liam Pichardo #2, Sam Va Tassel #4, Manson Frank #15) + 6 team songs (Let's Go, A Storm is Coming, Swagger Like Us, All I Do Is Win, Bring Em Out, Black and Yellow — only the first three assigned to slots by default).
 - The real batting order is baked in as the actual default lineup (see above) — not just documented, it's live in the code.
 - All 18 songs are dead-air-trimmed and loudness-normalized (see above).
-- A "Refresh App Content" button exists in Settings for forcing a genuine re-download.
-- `CACHE_NAME` is `storm-cache-v28`.
+- A "Refresh App Content" button and an offline-cache status indicator exist in Settings.
+- A committed smoke test exists at `test/smoke.js`.
+- Manage Team has a search box and warns on duplicate jersey numbers.
+- Header is the plain original wordmark (an 11U experiment was tried and reverted, see above).
+- `CACHE_NAME` is `storm-cache-v28` (unchanged this round — none of this work touched `sw.js`).
 - Push cadence: Jason wants changes committed AND pushed after each round of work, not batched up.
 
 ## Field-testing status (updated 2026-08-02 evening)
 Jason was actively testing live on his own phone throughout this session — that's how the `.selected` CSS bug got caught and how the Stop-vs-advance behavior got settled into the ADV switch. Playback selection, the Edit button, and the Advance-on-Stop switch have real live-device exposure with real bugs already found and fixed. **Still not explicitly confirmed:** whether the ~500ms long-press threshold and blue drag-ring feel right for drag-to-reorder on a real touchscreen, and whether the 112px action bar looks right in daylight/at a field.
 
 ## Open items / next steps
-- **Immediate, still unresolved:** confirm the Manage Team status-bar/close-button fix actually works, after a full delete-and-reinstall (not a restart) — Jason has not reported back on this yet, he moved on to the audio-quality work instead. The new Refresh App Content button is now the easy way to check any fix without a full reinstall.
+- **Immediate, still unresolved across several sessions now:** confirm the Manage Team status-bar/close-button fix actually works, after a full delete-and-reinstall (not a restart) — Jason has moved on to other work each time instead of confirming this either way. The Refresh App Content button is the easy way to check any fix without a full reinstall.
 - Have Jason listen through the loudness-normalized songs on a real device speaker to confirm they actually sound consistent, not just correct on paper.
-- The roster/default-lineup/audio-quality build-out is done — this is steady-state confirmation now, not a build phase.
+- The roster/default-lineup/audio-quality/app-improvement build-out is done — this is steady-state confirmation now, not a build phase.
 - Confirm the baked-in lineup shows up correctly on both Jason's and the other parent's phones.
 - Confirm or correct the two flagged possible name typos.
 - Confirm drag-to-reorder feel and action-bar sizing live, if not already done.
