@@ -2,7 +2,7 @@
 
 _Last updated: 2026-08-18_
 
-**Top-row labels renamed + assign-sheet song-pool split (2026-08-18, uncommitted).** The two team-walkout slot tags now read "TEAM WALKOUT 1" / "TEAM WALKOUT 2" (Victory tag unchanged) — `SLOT_DEFS` in `js/app.js`. `.slot-order`'s CSS was made wrap-safe (`right`+`white-space:normal`) since the longer label no longer reliably fits on one line at the existing font size. Also: `openAssignSheet()` now filters the picker to the correct song pool per slot kind — special slots (Walkout/Victory) only offer songs with no jersey number (team songs); lineup slots only offer songs that have one (player walk-up songs). Distinguished purely by the existing `number` field on each library entry (team songs in `roster.json` have none; players do, including Velez/Tineo's `"?"` placeholder, which still counts as eligible). Empty-state message now says which kind of song is missing. Not yet tested live on Jason's phone.
+**Top-row labels renamed + assign-sheet song-pool split (`62cea97`, 2026-08-18), pushed to `origin/main`, not yet confirmed live.** The two team-walkout slot tags now read "TEAM WALKOUT 1" / "TEAM WALKOUT 2" (Victory tag unchanged) — `SLOT_DEFS` in `js/app.js`. `.slot-order`'s CSS was made wrap-safe (`right`+`white-space:normal`) since the longer label no longer reliably fits on one line at the existing font size. Also: `openAssignSheet()` now filters the picker to the correct song pool per slot kind — special slots (Walkout/Victory) only offer songs with no jersey number (team songs); lineup slots only offer songs that have one (player walk-up songs). Distinguished purely by the existing `number` field on each library entry (team songs in `roster.json` have none; players do, including Velez/Tineo's `"?"` placeholder, which still counts as eligible). Empty-state message now says which kind of song is missing. Verified via a temporary Playwright harness (sp1 shows only the 6 team songs, l1 shows only the 13 player songs); `test/smoke.js`'s 13 checks still pass unmodified. Not yet confirmed on Jason's actual phone.
 
 ## What it is
 An offline-first PWA for playing walk-up songs at Storm baseball games. Installed to the iPhone home screen via GitHub Pages (`github.com/jasonackerman1/storm`); works with no signal at the field once installed and opened once with internet.
@@ -164,7 +164,7 @@ No longer "set once, Clear between games." Now: bake in the full permanent roste
 - **Top priority: confirm whether the app now consistently opens full-height on Jason's iPhone 15 Pro Max.** Two related fixes are live (`49b26a8` static `100dvh`, `a721313` JS-driven `--vh` recomputed on resume — this second one actually matches the intermittent pattern Jason described). Unconfirmed as of 2026-08-18.
 
 ## Current state
-- Everything committed and pushed to `origin/main` through `a721313`.
+- Everything committed and pushed to `origin/main` through `62cea97`.
 - **Roster (as of 2026-08-18):** Owen Ackerman #7, Kayden Lyons #5, Jaxsen Rodriguez #99, Dom Diaz #12, Jake Harris #13, Kameren Branch #11 (renamed from Maldonoldo), Caleb Gingras #68, Ethan Ladanyi #29, Liam Pichardo #2 (now batting last), Sam Va Tassel #4, Manson Frank #15, Velez #? (no song yet), Tineo #? (no song yet) + 6 team songs. Bobby Youmans (#45) left the team and is fully removed. Branch stays in the roster/app but has no default lineup slot (fall football conflict) — assign him manually on days he's there.
 - `LINEUP_COUNT` is 15 (grid is 3 columns × 6 rows, 18 cells) — 13 real players use slots, 2 slots (`l14`/`l15`) are pure headroom for now.
 - The real batting order is baked in as the actual default lineup, now on its 3rd version (`DEFAULT_LINEUP_VERSION = 3`) reflecting the fall roster + Pichardo-last + Branch-out-of-default changes.
@@ -174,7 +174,8 @@ No longer "set once, Clear between games." Now: bake in the full permanent roste
 - Manage Team has a search box and warns on duplicate jersey numbers.
 - Header is the plain original wordmark (an 11U experiment was tried and reverted, see above).
 - `html, body` now has both a `100dvh` fallback AND a JS-driven `--vh` custom property (recomputed on every foreground resume) to close a reported intermittent bottom-edge gap on larger iPhones — neither confirmed live yet.
-- The assign sheet (pencil/Edit, or tapping an empty slot) now sorts not-yet-picked players/songs to the top.
+- The assign sheet (pencil/Edit, or tapping an empty slot) now sorts not-yet-picked players/songs to the top, AND only offers the correct song pool per slot kind (team songs for Walkout/Victory, player songs for the 15 lineup slots) — neither confirmed live yet.
+- Top-row tags now read "TEAM WALKOUT 1" / "TEAM WALKOUT 2" (Victory unchanged) — not yet confirmed to fit cleanly on the tile on a real phone.
 - Push cadence: Jason wants changes committed AND pushed after each round of work, not batched up.
 
 ## Field-testing status (updated 2026-08-18)
