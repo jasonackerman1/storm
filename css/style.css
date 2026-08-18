@@ -34,6 +34,15 @@ html, body {
      tracks the actual dynamic viewport - declared after so older engines
      that don't understand dvh just keep the 100% value. */
   height: 100dvh;
+  /* Belt-and-suspenders: iOS doesn't always recompute 100dvh when the
+     installed PWA resumes from the background (seen as the app sometimes
+     opening at a smaller height until something forces a reflow, not a
+     consistent bug). js/app.js sets --vh from the real window.innerHeight
+     on load, resize, orientationchange, pageshow, and every foreground
+     resume - this JS-driven value is more reliable than dvh alone on iOS,
+     and is declared last so it wins once set. Falls back to 1vh before
+     JS has run. */
+  height: calc(var(--vh, 1vh) * 100);
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

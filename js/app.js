@@ -726,6 +726,18 @@
     }
   }
 
+  // ---------- Viewport height fix ----------
+  // iOS can leave the WKWebView's viewport height stale when the installed
+  // PWA is resumed from the background (rather than freshly launched) —
+  // seen as the app sometimes opening at a smaller/wrong height until
+  // something forces a reflow. 100dvh in CSS handles most cases but iOS
+  // doesn't always recompute it on resume, so this sets a --vh custom
+  // property from the real window.innerHeight and recomputes it on every
+  // point the app could resume, not just once at load.
+  function setViewportHeightVar() {
+    document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
+  }
+
   // ---------- Keep screen awake ----------
   // Without this, iOS locks the screen after ~30s of no touches — easy to
   // hit between at-bats — and the next tap has to unlock the phone first.
@@ -743,13 +755,22 @@
     document.addEventListener('visibilitychange', function () {
       // The OS releases the lock whenever the tab/app is backgrounded, so
       // it has to be re-requested every time the app comes back to the
-      // foreground — not just once at startup.
-      if (document.visibilityState === 'visible') requestWakeLock();
+      // foreground — not just once at startup. Same trigger point doubles
+      // as the reliable signal to recompute the viewport height fix above.
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+        setViewportHeightVar();
+      }
     });
   }
 
   // ---------- Init ----------
   function init() {
+    setViewportHeightVar();
+    window.addEventListener('resize', setViewportHeightVar);
+    window.addEventListener('orientationchange', setViewportHeightVar);
+    window.addEventListener('pageshow', setViewportHeightVar);
+
     slots = loadSlots();
     stopAdvancesEnabled = loadStopAdvancesSetting();
 
