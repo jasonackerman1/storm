@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var LINEUP_COUNT = 12;
+  var LINEUP_COUNT = 13;
   var DB_NAME = 'storm-db';
   var DB_VERSION = 1;
   var STORE = 'players';
