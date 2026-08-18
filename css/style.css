@@ -27,6 +27,13 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
+  /* Same iOS viewport-height quirk already fixed on .sheet-full elsewhere in
+     this file: height:100% can under-report the real visible viewport on
+     some iOS/device combos (larger Pro Max-class screens especially),
+     leaving a blank gap at the bottom below the fixed action bar. 100dvh
+     tracks the actual dynamic viewport - declared after so older engines
+     that don't understand dvh just keep the 100% value. */
+  height: 100dvh;
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
