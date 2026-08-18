@@ -46,7 +46,7 @@ async function selectedSlotId(page) {
 
 async function seedSlots(page) {
   await page.evaluate(() => {
-    localStorage.setItem('storm-default-lineup-version', '2'); // skip the baked-in-lineup migration
+    localStorage.setItem('storm-default-lineup-version', '3'); // skip the baked-in-lineup migration
     localStorage.setItem('storm-slots-v2', JSON.stringify({
       sp1: null, sp2: null, sp3: null,
       l1: 'p7', l2: null, l3: 't-letsgo', l4: null, l5: null,

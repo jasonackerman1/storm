@@ -13,14 +13,17 @@
   // this changes so it gets applied once on every device (even ones with
   // leftover state from earlier testing), without ever clobbering whatever
   // customizing (reorders/reassignments) happens afterward.
-  var DEFAULT_LINEUP_VERSION = 2;
+  var DEFAULT_LINEUP_VERSION = 3;
   var DEFAULT_SLOTS = {
     sp1: 't-stormiscoming',
     sp2: 't-letsgo',
     sp3: 't-swaggerlikeus',
-    l1: 'p5', l2: 'p99', l3: 'p12', l4: 'p13', l5: 'p11', l6: 'p68',
-    l7: 'p7', l8: 'p29', l9: 'p4', l10: 'p15', l11: 'p2',
-    l12: 'p-velez', l13: 'p-tineo'
+    // l5 deliberately omitted: Branch is playing fall football and may only
+    // make a few games, so he no longer gets a default lineup slot (he's
+    // still in roster.json, assign him manually on days he's actually here).
+    l1: 'p5', l2: 'p99', l3: 'p12', l4: 'p13', l6: 'p68',
+    l7: 'p7', l8: 'p29', l9: 'p4', l10: 'p15', l11: 'p-tineo',
+    l12: 'p-velez', l13: 'p2'
   };
 
   var SLOT_DEFS = [
