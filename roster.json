@@ -1,6 +1,5 @@
 [
   { "id": "p7", "number": "7", "name": "Owen Ackerman", "file": "mp3/7-owen-ackerman.mp3" },
-  { "id": "p45", "number": "45", "name": "Bobby Youmans", "file": "mp3/45-bobby-youmans.mp3" },
   { "id": "p5", "number": "5", "name": "Kayden Lyons", "file": "mp3/5-kayden-lyons.mp3" },
   { "id": "p99", "number": "99", "name": "Jaxsen Rodriguez", "file": "mp3/99-jaxsen-rodriguez.mp3" },
   { "id": "p12", "number": "12", "name": "Dom Diaz", "file": "mp3/12-dom-diaz.mp3" },
@@ -11,6 +10,8 @@
   { "id": "p2", "number": "2", "name": "Liam Pichardo", "file": "mp3/2-liam-pichardo.mp3" },
   { "id": "p4", "number": "4", "name": "Sam Va Tassel", "file": "mp3/4-sam-va-tassel.mp3" },
   { "id": "p15", "number": "15", "name": "Manson Frank", "file": "mp3/15-manson-frank.mp3" },
+  { "id": "p-velez", "number": "?", "name": "Velez", "file": null },
+  { "id": "p-tineo", "number": "?", "name": "Tineo", "file": null },
   { "id": "t-letsgo", "name": "Let's Go (Trick Daddy)", "file": "mp3/trick-daddy-lets-go.mp3" },
   { "id": "t-stormiscoming", "name": "A Storm is Coming", "file": "mp3/a-storm-is-coming.mp3" },
   { "id": "t-swaggerlikeus", "name": "Swagger Like Us", "file": "mp3/swagger like us.mp3" },

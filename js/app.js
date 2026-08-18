@@ -13,13 +13,14 @@
   // this changes so it gets applied once on every device (even ones with
   // leftover state from earlier testing), without ever clobbering whatever
   // customizing (reorders/reassignments) happens afterward.
-  var DEFAULT_LINEUP_VERSION = 1;
+  var DEFAULT_LINEUP_VERSION = 2;
   var DEFAULT_SLOTS = {
     sp1: 't-stormiscoming',
     sp2: 't-letsgo',
     sp3: 't-swaggerlikeus',
-    l1: 'p45', l2: 'p5', l3: 'p99', l4: 'p12', l5: 'p13', l6: 'p11',
-    l7: 'p68', l8: 'p7', l9: 'p29', l10: 'p4', l11: 'p15', l12: 'p2'
+    l1: 'p5', l2: 'p99', l3: 'p12', l4: 'p13', l5: 'p11', l6: 'p68',
+    l7: 'p7', l8: 'p29', l9: 'p4', l10: 'p15', l11: 'p2',
+    l12: 'p-velez', l13: 'p-tineo'
   };
 
   var SLOT_DEFS = [
@@ -169,7 +170,8 @@
       el.classList.remove('visible');
       return;
     }
-    var files = bundledPlayers.map(function (p) { return './' + p.file; });
+    var files = bundledPlayers.filter(function (p) { return p.file; })
+      .map(function (p) { return './' + p.file; });
     Promise.all(files.map(function (url) {
       return caches.match(url).then(function (res) { return !!res; }).catch(function () { return false; });
     })).then(function (results) {

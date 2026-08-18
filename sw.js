@@ -20,7 +20,8 @@ self.addEventListener('install', function (event) {
       .then(function (res) { return res.ok ? res.json() : []; })
       .catch(function () { return []; })
       .then(function (roster) {
-        var songFiles = (roster || []).map(function (p) { return './' + p.file; });
+        var songFiles = (roster || []).filter(function (p) { return p.file; })
+          .map(function (p) { return './' + p.file; });
         var allFiles = SHELL_FILES.concat(songFiles);
         return caches.open(CACHE_NAME).then(function (cache) {
           return Promise.all(
