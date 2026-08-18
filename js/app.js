@@ -27,8 +27,8 @@
   };
 
   var SLOT_DEFS = [
-    { id: 'sp1', tag: 'WALKOUT 1', kind: 'special' },
-    { id: 'sp2', tag: 'WALKOUT 2', kind: 'special' },
+    { id: 'sp1', tag: 'TEAM WALKOUT 1', kind: 'special' },
+    { id: 'sp2', tag: 'TEAM WALKOUT 2', kind: 'special' },
     { id: 'sp3', tag: 'VICTORY', kind: 'special' }
   ];
   for (var s = 1; s <= LINEUP_COUNT; s++) {
@@ -558,10 +558,20 @@
       def.kind === 'special' ? 'Assign ' + def.tag : 'Assign Slot ' + def.tag;
     var list = document.getElementById('assign-player-list');
     list.innerHTML = '';
-    if (library.length === 0) {
+    // Team slots (Walkout/Victory) only take full team songs (no jersey
+    // number); lineup slots only take a player's own walk-up song (has a
+    // jersey number). Keeps the two song pools from getting cross-assigned.
+    var eligible = library.filter(function (p) {
+      return def.kind === 'special' ? !p.number : !!p.number;
+    });
+    if (eligible.length === 0) {
       var empty = document.createElement('div');
       empty.className = 'src-tag';
-      empty.textContent = 'No songs yet. Add songs from Manage Team first.';
+      empty.textContent = library.length === 0
+        ? 'No songs yet. Add songs from Manage Team first.'
+        : (def.kind === 'special'
+          ? 'No team songs yet. Add one from Manage Team (leave # blank).'
+          : 'No walk-up songs yet. Add one from Manage Team with a jersey #.');
       list.appendChild(empty);
     }
     var assignedIds = {};
@@ -571,7 +581,7 @@
     // Not-yet-picked players/songs float to the top, so the sheet leads with
     // who's actually still available to assign. Stable sort preserves the
     // existing relative order within each group.
-    var sortedLibrary = library.slice().sort(function (a, b) {
+    var sortedLibrary = eligible.slice().sort(function (a, b) {
       return (assignedIds[a.id] ? 1 : 0) - (assignedIds[b.id] ? 1 : 0);
     });
     sortedLibrary.forEach(function (p) {

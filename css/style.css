@@ -220,6 +220,9 @@ body {
 
 .slot-btn.special .slot-order {
   color: var(--accent);
+  right: 6px;
+  white-space: normal;
+  line-height: 1.15;
 }
 
 /* Sheets / modals */

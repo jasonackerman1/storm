@@ -2,6 +2,8 @@
 
 _Last updated: 2026-08-18_
 
+**Top-row labels renamed + assign-sheet song-pool split (2026-08-18, uncommitted).** The two team-walkout slot tags now read "TEAM WALKOUT 1" / "TEAM WALKOUT 2" (Victory tag unchanged) — `SLOT_DEFS` in `js/app.js`. `.slot-order`'s CSS was made wrap-safe (`right`+`white-space:normal`) since the longer label no longer reliably fits on one line at the existing font size. Also: `openAssignSheet()` now filters the picker to the correct song pool per slot kind — special slots (Walkout/Victory) only offer songs with no jersey number (team songs); lineup slots only offer songs that have one (player walk-up songs). Distinguished purely by the existing `number` field on each library entry (team songs in `roster.json` have none; players do, including Velez/Tineo's `"?"` placeholder, which still counts as eligible). Empty-state message now says which kind of song is missing. Not yet tested live on Jason's phone.
+
 ## What it is
 An offline-first PWA for playing walk-up songs at Storm baseball games. Installed to the iPhone home screen via GitHub Pages (`github.com/jasonackerman1/storm`); works with no signal at the field once installed and opened once with internet.
 
@@ -157,7 +159,6 @@ Jason asked to center the logo + add "11U" on the left. Built as a 3-column grid
 No longer "set once, Clear between games." Now: bake in the full permanent roster (12 kids in batting order + both Walkout songs + Victory) as the shipped default, tweak day-of via drag-reorder, and only use gear/pencil for actual roster changes (kid added/removed/subbed). Two parents share day-to-day operation — Jason plus another parent currently on BallparkDJ, moving over once this app is further along.
 
 ## Pending (gated on Jason)
-- Rename "WALKOUT 1" / "WALKOUT 2" → "TEAM 1" / "TEAM 2" once Jason confirms on his phone that Owen's entry is showing up live. **Still not confirmed.**
 - "Sam Va Tassel" (possibly "VanTassel"/"Van Tassel") — still unconfirmed, used as-given. ("Maldonoldo" was confirmed and corrected to "Branch" 2026-08-18, see above.)
 - Real jersey numbers and walk-up songs for Velez and Tineo — currently `"?"` and no song (intentional placeholders). Follow the standard single-file workflow when provided.
 - **Top priority: confirm whether the app now consistently opens full-height on Jason's iPhone 15 Pro Max.** Two related fixes are live (`49b26a8` static `100dvh`, `a721313` JS-driven `--vh` recomputed on resume — this second one actually matches the intermittent pattern Jason described). Unconfirmed as of 2026-08-18.
@@ -188,5 +189,4 @@ Jason was actively testing live on his own phone throughout the 2026-08-02 sessi
 - Confirm the baked-in fall lineup (Pichardo last, Branch out of default, Youmans gone, Velez/Tineo in) shows up correctly on both Jason's and the other parent's phones.
 - Confirm or correct "Sam Va Tassel."
 - Confirm drag-to-reorder feel and action-bar sizing live, if not already done.
-- Rename Walkout 1/2 → Team 1/Team 2 once confirmed live.
 - Screen wake lock still not field-tested during a real game.
