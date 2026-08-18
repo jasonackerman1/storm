@@ -1,6 +1,6 @@
 # Storm — Project Status
 
-_Last updated: 2026-08-03_
+_Last updated: 2026-08-18_
 
 ## What it is
 An offline-first PWA for playing walk-up songs at Storm baseball games. Installed to the iPhone home screen via GitHub Pages (`github.com/jasonackerman1/storm`); works with no signal at the field once installed and opened once with internet.
@@ -8,7 +8,7 @@ An offline-first PWA for playing walk-up songs at Storm baseball games. Installe
 ## Architecture
 - Static site: `index.html`, `css/style.css`, `js/app.js`, `sw.js` (service worker), `manifest.json`, `icons/`, `fonts/`
 - Roster data: `roster.json` (bundled/committed songs, shipped with the app) + IndexedDB (`storm-db`, store `players`) for songs added directly from the phone via **Manage Team**
-- Slot assignments: localStorage key `storm-slots-v2`, keyed by slot id (not array index): `sp1`/`sp2`/`sp3` (Walkout 1, Walkout 2, Victory) + `l1`–`l12` (12 lineup slots). Defined in `SLOT_DEFS` in `js/app.js`.
+- Slot assignments: localStorage key `storm-slots-v2`, keyed by slot id (not array index): `sp1`/`sp2`/`sp3` (Walkout 1, Walkout 2, Victory) + `l1`–`l15` (`LINEUP_COUNT`, currently 15 — only 13 are filled by default, `l14`/`l15` are headroom). Defined in `SLOT_DEFS` in `js/app.js`. Grid is 3 columns × 6 rows.
 
 ## Build history
 1. **`c1b72d5`** — Initial build: 12-button lineup grid, tap-to-play/tap-to-switch playback, per-slot reassign (pencil icon), Manage Team screen (add players + MP3 from phone → IndexedDB), bundled-roster path (`roster.json` + `mp3/`), Clear Lineup, offline-first PWA shell.
@@ -130,34 +130,58 @@ Jason asked directly what could be better/more scalable. Read the actual current
 ## Header logo iteration (2026-08-03, `f3d5cc2` → `0d4c4df` → `2b19d08`)
 Jason asked to center the logo + add "11U" on the left. Built as a 3-column grid (verified centered to 0px on a 390px viewport) — **he didn't like it**. Reverted to logo-left + "- 11U" inline. **Then asked to remove 11U entirely** ("trying to do too much"). Net result: three commits landing back at the original plain wordmark header. Normal, cheap design iteration — not a wasted round trip.
 
+## Session of 2026-08-18 — audio fixes, fall roster overhaul, layout fixes
+
+**Owen's walk-up song replaced (`3636725`).** New song, same standard workflow: preserved the original to scratchpad, cut to exactly 10.0s with a 1s fade-out from 0:00, two-pass loudnorm landed at -11.1 LUFS (right in the established roster range).
+
+**"A Storm is Coming" quiet intro boosted (`97a35eb`).** Jason flagged the beginning sounds low. Measured segment-by-segment: the first ~30s is a genuinely quiet spoken-word build (-34 to -28dB) before the beat drops and the rest of the 4:54 track sits at -13 to -14dB — a real intro/body dynamic-range gap a single loudnorm pass can't fix. Asked Jason how to handle it (boost / trim / leave) — he chose boost, keep full length. New technique: `dynaudnorm` (frame-based auto-gain) first to lift the quiet passage, **then** the standard two-pass `loudnorm` on top to restore a safe -1.0dBTP ceiling (the dynaudnorm pass alone pushed true peak to +1.2dBTP). Result: intro raised to -14 to -16dB, body -12 to -13.5dB, duration unchanged.
+
+**13th lineup slot added, then grid reverted to 3-per-row, then headroom added for 14/15 (`c1a8d42`, `7bd79fc`, `105c7ce`).** Team's going into fall with 13 teammates again — bumped `LINEUP_COUNT` 12→13 (all downstream logic already keys off `LINEUP_IDS.length`, so this was safe). Grid switched to 4×4 to fit. Jason didn't like the denser 4-column look — reverted to 3 columns, added a 6th row instead (18 cells for 16 real slots, 2 unused and that's fine per Jason). Later asked for headroom up to a 15th slot "even though we shouldn't have any" — bumped `LINEUP_COUNT` to 15, which fits the existing 3×6 grid exactly with zero CSS change.
+
+**Fall roster overhaul (`7adaa1b`, `5344510`+`fd07c47`, `a93b24a`):**
+- Bobby Youmans (#45) left the team — removed entirely from `roster.json`, mp3 deleted, dropped from `DEFAULT_SLOTS`, everyone else shifted up one slot.
+- "Kameren Maldonoldo" corrected to **Kameren Branch** (a real typo, not the roster removal above) — `roster.json` name/file updated, mp3 renamed. Player ID (`p11`) unchanged so no lineup disruption. **Git gotcha hit here:** a `git mv` + a multi-path `git add` where one path no longer existed caused the *entire* `git add` to silently fail, so the first commit only captured the file rename, not the roster.json edit — caught via `git show --stat` immediately after and fixed with a follow-up commit. Lesson: always sanity-check `git status`/`git show --stat` right after a commit mixing `git mv` with other edits.
+- Two new teammates added — **Velez** and **Tineo** (last names only) — no jersey number yet (`"?"` placeholder) and no song yet (`file: null`). Found and fixed two real gaps this exposed: both `sw.js`'s precache and the offline-status indicator in `js/app.js` built a cache URL from every player's `file` field unconditionally, which would've produced a literal `./null` request and a **permanent unfixable "not downloaded" warning** for these two — fixed both to filter out players with no file first.
+- Pichardo moved to the true last lineup slot (`l13`... now effectively wherever the last filled slot is) since he "always bats last by design."
+- Kameren Branch removed from the *default lineup* (not the roster/app) since he's playing fall football and may only make a few games — his old slot is simply left empty, still selectable via the assign sheet any day he's actually there.
+- `DEFAULT_LINEUP_VERSION` bumped twice more (1→2→3) across these changes — same "next season reset" mechanism from the original bake-in, which pushes the new lineup onto every already-installed phone on next load (overwriting any day-of drag-reorder customization currently sitting there). `test/smoke.js`'s `seedSlots()` helper hardcodes a matching "skip migration" version number — has to be bumped in lockstep or the migration silently refires mid-test.
+- Also found a stale `python3 -m http.server 8934` process left running for 5 days from an unrelated project (TheChallenge), squatting on the exact port `smoke.js` expects — if the smoke test ever fails at the very first `clickSlot` with a null-element error, check `lsof -i :8934` for a stale server before assuming the app broke.
+
+**Suspected iOS viewport-height fix for "wasted space at the bottom" (`49b26a8`) — NOT YET CONFIRMED.** Jason reported real wasted space at the bottom on his iPhone 15 Pro Max. A headless-Chrome simulation at the exact 430×932 viewport shows the flex layout filling the screen with zero gap, so this can't be reproduced outside real iOS — the fix is a reasoned bet based on the same `100vh`-under-reports-the-real-viewport quirk already fixed once on `.sheet-full` (see the Manage Team status-bar section above), applied here to the root `html, body` height rule the whole page depends on. `css/style.css` is network-first, so it should take effect on next app open with no reinstall needed. **If Jason says the gap is still there, this theory was wrong — don't just reapply the same fix, get a screenshot and exact location of the gap first.**
+
 ## Jason's expected usage pattern — UPDATED 2026-08-02
 No longer "set once, Clear between games." Now: bake in the full permanent roster (12 kids in batting order + both Walkout songs + Victory) as the shipped default, tweak day-of via drag-reorder, and only use gear/pencil for actual roster changes (kid added/removed/subbed). Two parents share day-to-day operation — Jason plus another parent currently on BallparkDJ, moving over once this app is further along.
 
 ## Pending (gated on Jason)
 - Rename "WALKOUT 1" / "WALKOUT 2" → "TEAM 1" / "TEAM 2" once Jason confirms on his phone that Owen's entry is showing up live. **Still not confirmed.**
-- Two possible spelling typos, flagged but not confirmed — used as-given until Jason says otherwise: "Kameren **Maldonoldo**" (possibly "Maldonado") and "Sam **Va Tassel**" (possibly "VanTassel"/"Van Tassel"). Fix is a simple `roster.json` name-field edit if/when confirmed.
+- "Sam Va Tassel" (possibly "VanTassel"/"Van Tassel") — still unconfirmed, used as-given. ("Maldonoldo" was confirmed and corrected to "Branch" 2026-08-18, see above.)
+- Real jersey numbers and walk-up songs for Velez and Tineo — currently `"?"` and no song (intentional placeholders). Follow the standard single-file workflow when provided.
+- **Top priority: confirm whether the `100dvh` fix (`49b26a8`) actually closed the "wasted space at the bottom" issue on Jason's iPhone 15 Pro Max.** Unconfirmed as of 2026-08-18.
 
 ## Current state
-- Everything committed and pushed to `origin/main` through `2b19d08`.
-- **Roster complete:** all 12 kids loaded (Owen #7, Bobby Youmans #45, Kayden Lyons #5, Jaxsen Rodriguez #99, Dom Diaz #12, Jake Harris #13, Kameren Maldonoldo #11, Caleb Gingras #68, Ethan Ladanyi #29, Liam Pichardo #2, Sam Va Tassel #4, Manson Frank #15) + 6 team songs (Let's Go, A Storm is Coming, Swagger Like Us, All I Do Is Win, Bring Em Out, Black and Yellow — only the first three assigned to slots by default).
-- The real batting order is baked in as the actual default lineup (see above) — not just documented, it's live in the code.
-- All 18 songs are dead-air-trimmed and loudness-normalized (see above).
+- Everything committed and pushed to `origin/main` through `49b26a8`.
+- **Roster (as of 2026-08-18):** Owen Ackerman #7, Kayden Lyons #5, Jaxsen Rodriguez #99, Dom Diaz #12, Jake Harris #13, Kameren Branch #11 (renamed from Maldonoldo), Caleb Gingras #68, Ethan Ladanyi #29, Liam Pichardo #2 (now batting last), Sam Va Tassel #4, Manson Frank #15, Velez #? (no song yet), Tineo #? (no song yet) + 6 team songs. Bobby Youmans (#45) left the team and is fully removed. Branch stays in the roster/app but has no default lineup slot (fall football conflict) — assign him manually on days he's there.
+- `LINEUP_COUNT` is 15 (grid is 3 columns × 6 rows, 18 cells) — 13 real players use slots, 2 slots (`l14`/`l15`) are pure headroom for now.
+- The real batting order is baked in as the actual default lineup, now on its 3rd version (`DEFAULT_LINEUP_VERSION = 3`) reflecting the fall roster + Pichardo-last + Branch-out-of-default changes.
+- All songs are dead-air-trimmed and loudness-normalized, including a new frame-based intro-boost technique used on "A Storm is Coming"'s quiet opening.
 - A "Refresh App Content" button and an offline-cache status indicator exist in Settings.
-- A committed smoke test exists at `test/smoke.js`.
+- A committed smoke test exists at `test/smoke.js` — kept in sync with `DEFAULT_LINEUP_VERSION` bumps.
 - Manage Team has a search box and warns on duplicate jersey numbers.
 - Header is the plain original wordmark (an 11U experiment was tried and reverted, see above).
-- `CACHE_NAME` is `storm-cache-v28` (unchanged this round — none of this work touched `sw.js`).
+- `html, body` now has a `100dvh` fallback height (2026-08-18, unconfirmed live) to try to close a reported bottom-edge gap on larger iPhones.
 - Push cadence: Jason wants changes committed AND pushed after each round of work, not batched up.
 
-## Field-testing status (updated 2026-08-02 evening)
-Jason was actively testing live on his own phone throughout this session — that's how the `.selected` CSS bug got caught and how the Stop-vs-advance behavior got settled into the ADV switch. Playback selection, the Edit button, and the Advance-on-Stop switch have real live-device exposure with real bugs already found and fixed. **Still not explicitly confirmed:** whether the ~500ms long-press threshold and blue drag-ring feel right for drag-to-reorder on a real touchscreen, and whether the 112px action bar looks right in daylight/at a field.
+## Field-testing status (updated 2026-08-18)
+Jason was actively testing live on his own phone throughout the 2026-08-02 session — that's how the `.selected` CSS bug got caught and how the Stop-vs-advance behavior got settled into the ADV switch. Playback selection, the Edit button, and the Advance-on-Stop switch have real live-device exposure with real bugs already found and fixed. **Still not explicitly confirmed:** whether the ~500ms long-press threshold and blue drag-ring feel right for drag-to-reorder on a real touchscreen, whether the 112px action bar looks right in daylight/at a field, and (new, 2026-08-18) whether the `100dvh` fix actually closed the bottom-gap issue on the iPhone 15 Pro Max.
 
 ## Open items / next steps
+- **Top priority:** get Jason's confirmation on the `100dvh` bottom-gap fix (see above).
 - **Immediate, still unresolved across several sessions now:** confirm the Manage Team status-bar/close-button fix actually works, after a full delete-and-reinstall (not a restart) — Jason has moved on to other work each time instead of confirming this either way. The Refresh App Content button is the easy way to check any fix without a full reinstall.
-- Have Jason listen through the loudness-normalized songs on a real device speaker to confirm they actually sound consistent, not just correct on paper.
+- Get real jersey numbers + walk-up songs for Velez and Tineo when Jason has them.
+- Have Jason listen through the loudness-normalized songs (including the new Storm-intro boost and Owen's new song) on a real device speaker to confirm they actually sound consistent, not just correct on paper.
 - The roster/default-lineup/audio-quality/app-improvement build-out is done — this is steady-state confirmation now, not a build phase.
-- Confirm the baked-in lineup shows up correctly on both Jason's and the other parent's phones.
-- Confirm or correct the two flagged possible name typos.
+- Confirm the baked-in fall lineup (Pichardo last, Branch out of default, Youmans gone, Velez/Tineo in) shows up correctly on both Jason's and the other parent's phones.
+- Confirm or correct "Sam Va Tassel."
 - Confirm drag-to-reorder feel and action-bar sizing live, if not already done.
 - Rename Walkout 1/2 → Team 1/Team 2 once confirmed live.
 - Screen wake lock still not field-tested during a real game.
