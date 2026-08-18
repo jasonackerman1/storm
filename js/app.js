@@ -564,7 +564,17 @@
       empty.textContent = 'No songs yet. Add songs from Manage Team first.';
       list.appendChild(empty);
     }
-    library.forEach(function (p) {
+    var assignedIds = {};
+    Object.keys(slots).forEach(function (id) {
+      if (slots[id]) assignedIds[slots[id]] = true;
+    });
+    // Not-yet-picked players/songs float to the top, so the sheet leads with
+    // who's actually still available to assign. Stable sort preserves the
+    // existing relative order within each group.
+    var sortedLibrary = library.slice().sort(function (a, b) {
+      return (assignedIds[a.id] ? 1 : 0) - (assignedIds[b.id] ? 1 : 0);
+    });
+    sortedLibrary.forEach(function (p) {
       var row = document.createElement('button');
       row.className = 'list-row';
       row.innerHTML = (p.number ? '<span class="num">' + escapeHtml(p.number) + '</span>' : '') +
