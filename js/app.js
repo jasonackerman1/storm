@@ -50,7 +50,14 @@
   var activeSequenceOnComplete = null;
 
   // ---------- Soundboard state ----------
-  var soundboardClips = []; // { id, label }
+  // Mirrors the bundled/local split already used for players: bundled clips
+  // ship in soundboard.json + sfx/ (committed, same for every device, shown
+  // to everyone the moment it's deployed); local clips are phone-added via
+  // the Add Sound sheet (IndexedDB, per-device). soundboardClips is the
+  // merged, render-facing list — rebuilt from the two after any change.
+  var bundledSoundboardClips = [];
+  var localSoundboardClips = [];
+  var soundboardClips = []; // { id, label, source }
   var soundboardObjectUrlCache = new Map();
   var activeSoundboardSounds = new Map(); // clipId -> playing Audio element
   var soundboardEditingId = null; // null while the sheet is in "add" mode
@@ -692,6 +699,17 @@
   function closeSheet(id) { document.getElementById(id).classList.add('hidden'); }
 
   // ---------- Soundboard ----------
+  function rebuildSoundboardLibrary() {
+    soundboardClips = bundledSoundboardClips.concat(localSoundboardClips).sort(function (a, b) {
+      return a.label.localeCompare(b.label);
+    });
+  }
+
+  function soundboardSrcFor(clip) {
+    if (!clip) return null;
+    return clip.source === 'bundled' ? clip.file : soundboardObjectUrlCache.get(clip.id);
+  }
+
   function stopSoundboardClip(clipId) {
     var audio = activeSoundboardSounds.get(clipId);
     if (audio) {
@@ -716,7 +734,8 @@
         stopSoundboardClip(clipId);
       }
     } else {
-      var src = soundboardObjectUrlCache.get(clipId);
+      var clip = soundboardClips.filter(function (c) { return c.id === clipId; })[0];
+      var src = soundboardSrcFor(clip);
       if (!src) return;
       var audio = new Audio(src);
       var clear = function () {
@@ -731,7 +750,10 @@
     renderSoundboardGrid();
   }
 
-  function bindSoundboardTileInteraction(tile, clipId) {
+  // Only phone-added (local) clips can be edited/replaced/deleted — bundled
+  // clips ship the same for everyone via soundboard.json, same as a bundled
+  // player's song can't be deleted from Manage Team either.
+  function bindSoundboardTileInteraction(tile, clip) {
     var pressTimer = null;
     var longPressFired = false;
 
@@ -742,10 +764,12 @@
     tile.addEventListener('pointerdown', function () {
       longPressFired = false;
       clearTimer();
-      pressTimer = setTimeout(function () {
-        longPressFired = true;
-        openSoundboardEditSheet(clipId);
-      }, LONG_PRESS_MS);
+      if (clip.source === 'local') {
+        pressTimer = setTimeout(function () {
+          longPressFired = true;
+          openSoundboardEditSheet(clip.id);
+        }, LONG_PRESS_MS);
+      }
     });
 
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evt) {
@@ -754,7 +778,7 @@
 
     tile.addEventListener('click', function () {
       if (longPressFired) { longPressFired = false; return; }
-      toggleSoundboardClip(clipId);
+      toggleSoundboardClip(clip.id);
     });
   }
 
@@ -771,7 +795,7 @@
       label.className = 'soundboard-tile-label';
       label.textContent = clip.label;
       tile.appendChild(label);
-      bindSoundboardTileInteraction(tile, clip.id);
+      bindSoundboardTileInteraction(tile, clip);
       grid.appendChild(tile);
     });
   }
@@ -787,7 +811,7 @@
   }
 
   function openSoundboardEditSheet(clipId) {
-    var clip = soundboardClips.filter(function (c) { return c.id === clipId; })[0];
+    var clip = localSoundboardClips.filter(function (c) { return c.id === clipId; })[0];
     if (!clip) return;
     soundboardEditingId = clipId;
     document.getElementById('soundboard-edit-title').textContent = 'Edit Sound';
@@ -800,7 +824,7 @@
 
   function saveSoundboardClip(label, file) {
     if (soundboardEditingId) {
-      var clip = soundboardClips.filter(function (c) { return c.id === soundboardEditingId; })[0];
+      var clip = localSoundboardClips.filter(function (c) { return c.id === soundboardEditingId; })[0];
       if (!clip) return Promise.resolve();
       clip.label = label;
       if (file) {
@@ -809,30 +833,35 @@
         if (oldUrl) URL.revokeObjectURL(oldUrl);
         return idbPut(SOUND_STORE, { id: clip.id, label: label, blob: file }).then(function () {
           soundboardObjectUrlCache.set(clip.id, URL.createObjectURL(file));
+          rebuildSoundboardLibrary();
         });
       }
       // Label-only edit — re-fetch the existing blob rather than trusting a
       // cached copy, since idbPut overwrites the whole record.
       return idbGet(SOUND_STORE, clip.id).then(function (rec) {
         return idbPut(SOUND_STORE, { id: clip.id, label: label, blob: rec.blob });
+      }).then(function () {
+        rebuildSoundboardLibrary();
       });
     }
     var id = 'sound-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
     return idbPut(SOUND_STORE, { id: id, label: label, blob: file }).then(function () {
       soundboardObjectUrlCache.set(id, URL.createObjectURL(file));
-      soundboardClips.push({ id: id, label: label });
+      localSoundboardClips.push({ id: id, label: label, source: 'local' });
+      rebuildSoundboardLibrary();
     });
   }
 
   function deleteSoundboardClip(clipId) {
-    var clip = soundboardClips.filter(function (c) { return c.id === clipId; })[0];
+    var clip = localSoundboardClips.filter(function (c) { return c.id === clipId; })[0];
     if (!clip) return;
     if (!confirm('Delete "' + clip.label + '"?')) return;
     stopSoundboardClip(clip.id);
     idbDelete(SOUND_STORE, clip.id).then(function () {
       var url = soundboardObjectUrlCache.get(clip.id);
       if (url) { URL.revokeObjectURL(url); soundboardObjectUrlCache.delete(clip.id); }
-      soundboardClips = soundboardClips.filter(function (c) { return c.id !== clip.id; });
+      localSoundboardClips = localSoundboardClips.filter(function (c) { return c.id !== clip.id; });
+      rebuildSoundboardLibrary();
       renderSoundboardGrid();
       closeSheet('soundboard-edit-sheet');
     });
@@ -1090,16 +1119,25 @@
         });
       })
       .catch(function () { localPlayers = []; })
-      .then(function () { return idbGetAll(SOUND_STORE); })
+      .then(function () { return fetch('soundboard.json', { cache: 'no-store' }); })
+      .then(function (res) { return res.ok ? res.json() : []; })
+      .catch(function () { return []; })
+      .then(function (data) {
+        bundledSoundboardClips = (data || []).map(function (c) {
+          return { id: c.id, label: c.label, file: c.file, source: 'bundled' };
+        });
+        return idbGetAll(SOUND_STORE);
+      })
       .then(function (records) {
-        soundboardClips = (records || []).map(function (r) {
+        localSoundboardClips = (records || []).map(function (r) {
           soundboardObjectUrlCache.set(r.id, URL.createObjectURL(r.blob));
-          return { id: r.id, label: r.label };
+          return { id: r.id, label: r.label, source: 'local' };
         });
       })
-      .catch(function () { soundboardClips = []; })
+      .catch(function () { localSoundboardClips = []; })
       .then(function () {
         rebuildLibrary();
+        rebuildSoundboardLibrary();
         renderGrid();
         renderManageList();
         renderSoundboardGrid();

@@ -1,5 +1,5 @@
-var CACHE_NAME = 'storm-cache-v28';
-var NETWORK_FIRST_FILES = ['./', './index.html', './css/style.css', './js/app.js', './manifest.json', './roster.json'];
+var CACHE_NAME = 'storm-cache-v29';
+var NETWORK_FIRST_FILES = ['./', './index.html', './css/style.css', './js/app.js', './manifest.json', './roster.json', './soundboard.json'];
 
 var SHELL_FILES = [
   './',
@@ -8,6 +8,7 @@ var SHELL_FILES = [
   './js/app.js',
   './manifest.json',
   './roster.json',
+  './soundboard.json',
   './icons/icon-180.png',
   './icons/icon-512.png',
   './icons/storm-wordmark.png',
@@ -16,13 +17,22 @@ var SHELL_FILES = [
 
 self.addEventListener('install', function (event) {
   event.waitUntil(
-    fetch('./roster.json', { cache: 'no-store' })
-      .then(function (res) { return res.ok ? res.json() : []; })
-      .catch(function () { return []; })
-      .then(function (roster) {
+    Promise.all([
+      fetch('./roster.json', { cache: 'no-store' })
+        .then(function (res) { return res.ok ? res.json() : []; })
+        .catch(function () { return []; }),
+      fetch('./soundboard.json', { cache: 'no-store' })
+        .then(function (res) { return res.ok ? res.json() : []; })
+        .catch(function () { return []; })
+    ])
+      .then(function (results) {
+        var roster = results[0];
+        var soundboard = results[1];
         var songFiles = (roster || []).filter(function (p) { return p.file; })
           .map(function (p) { return './' + p.file; });
-        var allFiles = SHELL_FILES.concat(songFiles);
+        var sfxFiles = (soundboard || []).filter(function (c) { return c.file; })
+          .map(function (c) { return './' + c.file; });
+        var allFiles = SHELL_FILES.concat(songFiles, sfxFiles);
         return caches.open(CACHE_NAME).then(function (cache) {
           return Promise.all(
             allFiles.map(function (url) {
