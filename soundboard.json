@@ -1,8 +1,4 @@
 [
   { "id": "sfx-crackbat", "label": "Crack of the Bat", "file": "sfx/crack-of-the-bat.mp3" },
-  { "id": "sfx-airhorn", "label": "Air Horn", "file": "sfx/air-horn.mp3" },
-  { "id": "sfx-sadtrombone", "label": "Sad Trombone", "file": "sfx/sad-trombone.mp3" },
-  { "id": "sfx-crowdcheer", "label": "Crowd Cheer", "file": "sfx/crowd-cheer.mp3" },
-  { "id": "sfx-crowdboo", "label": "Crowd Boo", "file": "sfx/crowd-boo.mp3" },
-  { "id": "sfx-drumroll", "label": "Drum Roll", "file": "sfx/drum-roll.mp3" }
+  { "id": "sfx-crowdcheer", "label": "Crowd Cheer", "file": "sfx/crowd-cheer.mp3" }
 ]
