@@ -3,8 +3,9 @@
 
   var LINEUP_COUNT = 15;
   var DB_NAME = 'storm-db';
-  var DB_VERSION = 1;
+  var DB_VERSION = 2;
   var STORE = 'players';
+  var SOUND_STORE = 'soundboard';
   var SLOTS_KEY = 'storm-slots-v2';
   var STOP_ADVANCES_KEY = 'storm-stop-advances';
   var DEFAULT_LINEUP_VERSION_KEY = 'storm-default-lineup-version';
@@ -45,6 +46,20 @@
   var dragState = null;
   var stopAdvancesEnabled = true;
   var objectUrlCache = new Map();
+  var nameClipObjectUrlCache = new Map();
+  var activeSequenceOnComplete = null;
+
+  // ---------- Soundboard state ----------
+  var soundboardClips = []; // { id, label }
+  var soundboardObjectUrlCache = new Map();
+  var activeSoundboardSounds = new Map(); // clipId -> playing Audio element
+  var soundboardEditingId = null; // null while the sheet is in "add" mode
+  // A clip whose duration is at or under this is treated as a one-shot
+  // stinger (retap restarts it); anything longer is treated as a loop-style
+  // sound (retap stops it). Duration isn't known until the browser loads the
+  // local blob's metadata, which is effectively instant, so by the time a
+  // user could plausibly retap it's already available.
+  var SOUND_STINGER_MAX_SECONDS = 8;
 
   var LINEUP_IDS = SLOT_DEFS.filter(function (d) { return d.kind === 'lineup'; })
     .map(function (d) { return d.id; });
@@ -54,6 +69,8 @@
   }
 
   // ---------- IndexedDB helpers ----------
+  // Store-name-parameterized so both the existing players store and the new
+  // soundboard clips store share one set of helpers.
   function openDB() {
     return new Promise(function (resolve, reject) {
       var req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -62,39 +79,53 @@
         if (!db.objectStoreNames.contains(STORE)) {
           db.createObjectStore(STORE, { keyPath: 'id' });
         }
+        if (!db.objectStoreNames.contains(SOUND_STORE)) {
+          db.createObjectStore(SOUND_STORE, { keyPath: 'id' });
+        }
       };
       req.onsuccess = function () { resolve(req.result); };
       req.onerror = function () { reject(req.error); };
     });
   }
 
-  function idbGetAll() {
+  function idbGetAll(store) {
     return openDB().then(function (db) {
       return new Promise(function (resolve, reject) {
-        var tx = db.transaction(STORE, 'readonly');
-        var req = tx.objectStore(STORE).getAll();
+        var tx = db.transaction(store, 'readonly');
+        var req = tx.objectStore(store).getAll();
         req.onsuccess = function () { resolve(req.result || []); };
         req.onerror = function () { reject(req.error); };
       });
     });
   }
 
-  function idbPut(record) {
+  function idbGet(store, id) {
     return openDB().then(function (db) {
       return new Promise(function (resolve, reject) {
-        var tx = db.transaction(STORE, 'readwrite');
-        tx.objectStore(STORE).put(record);
+        var tx = db.transaction(store, 'readonly');
+        var req = tx.objectStore(store).get(id);
+        req.onsuccess = function () { resolve(req.result); };
+        req.onerror = function () { reject(req.error); };
+      });
+    });
+  }
+
+  function idbPut(store, record) {
+    return openDB().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction(store, 'readwrite');
+        tx.objectStore(store).put(record);
         tx.oncomplete = function () { resolve(); };
         tx.onerror = function () { reject(tx.error); };
       });
     });
   }
 
-  function idbDelete(id) {
+  function idbDelete(store, id) {
     return openDB().then(function (db) {
       return new Promise(function (resolve, reject) {
-        var tx = db.transaction(STORE, 'readwrite');
-        tx.objectStore(STORE).delete(id);
+        var tx = db.transaction(store, 'readwrite');
+        tx.objectStore(store).delete(id);
         tx.oncomplete = function () { resolve(); };
         tx.onerror = function () { reject(tx.error); };
       });
@@ -215,23 +246,73 @@
 
   function stopPlayback() {
     var audio = document.getElementById('player-audio');
+    // Clear the sequencer's own onended chaining and pending completion
+    // callback FIRST — otherwise pausing/rewinding here can still let a
+    // queued step or the completion callback fire after a manual stop.
+    audio.onended = null;
+    activeSequenceOnComplete = null;
     audio.pause();
     audio.currentTime = 0;
     currentPlayingSlot = null;
+  }
+
+  // Plays a list of clip URLs back-to-back on the single shared player-audio
+  // element, skipping any null/unset entries. onComplete fires once after the
+  // whole sequence finishes naturally (not on a manual stop) — never after an
+  // individual clip in the middle of the sequence. Reusable anywhere clips
+  // need to chain, e.g. a name-announcement clip before a player's walk-up
+  // song.
+  function playSequence(urls, onComplete) {
+    var audio = document.getElementById('player-audio');
+    var queue = (urls || []).filter(Boolean).slice();
+    activeSequenceOnComplete = onComplete || null;
+
+    function playNext() {
+      if (queue.length === 0) {
+        audio.onended = null;
+        var cb = activeSequenceOnComplete;
+        activeSequenceOnComplete = null;
+        if (cb) cb();
+        return;
+      }
+      audio.pause();
+      audio.src = queue.shift();
+      audio.currentTime = 0;
+      audio.onended = playNext;
+      audio.play().catch(function () {});
+    }
+    playNext();
+  }
+
+  function songSrcFor(player) {
+    if (!player) return null;
+    return player.source === 'bundled' ? player.file : objectUrlCache.get(player.id);
+  }
+
+  function nameClipSrcFor(player) {
+    if (!player) return null;
+    if (player.source === 'bundled') return player.nameClipFile || null;
+    return player.hasNameClip ? nameClipObjectUrlCache.get(player.id) : null;
   }
 
   function firePlayback(slotId) {
     var playerId = slots[slotId];
     var player = library.filter(function (p) { return p.id === playerId; })[0];
     if (!player) return;
-    var src = player.source === 'bundled' ? player.file : objectUrlCache.get(player.id);
-    if (!src) return;
-    var audio = document.getElementById('player-audio');
-    audio.pause();
-    audio.src = src;
-    audio.currentTime = 0;
-    audio.play().catch(function () {});
+    var songSrc = songSrcFor(player);
+    if (!songSrc) return;
     currentPlayingSlot = slotId;
+    // Graceful fallback is automatic: playSequence() drops the null name
+    // clip entry when a player has none, and just plays the song.
+    playSequence([nameClipSrcFor(player), songSrc], function () {
+      var finishedSlot = slotId;
+      currentPlayingSlot = null;
+      // Only auto-advance if the user hasn't already tapped ahead to a
+      // different slot while this sequence was finishing out.
+      if (selectedSlot === finishedSlot) advanceToNextLineupSlot(finishedSlot);
+      renderGrid();
+      updateActionBar();
+    });
   }
 
   function toggleActionPlay() {
@@ -534,9 +615,11 @@
 
   function deletePlayer(p) {
     if (!confirm('Remove "' + p.name + '" from the team?')) return;
-    idbDelete(p.id).then(function () {
+    idbDelete(STORE, p.id).then(function () {
       var url = objectUrlCache.get(p.id);
       if (url) { URL.revokeObjectURL(url); objectUrlCache.delete(p.id); }
+      var nameUrl = nameClipObjectUrlCache.get(p.id);
+      if (nameUrl) { URL.revokeObjectURL(nameUrl); nameClipObjectUrlCache.delete(p.id); }
       localPlayers = localPlayers.filter(function (x) { return x.id !== p.id; });
       Object.keys(slots).forEach(function (slotId) {
         if (slots[slotId] === p.id) slots[slotId] = null;
@@ -608,6 +691,190 @@
   function showSheet(id) { document.getElementById(id).classList.remove('hidden'); }
   function closeSheet(id) { document.getElementById(id).classList.add('hidden'); }
 
+  // ---------- Soundboard ----------
+  function stopSoundboardClip(clipId) {
+    var audio = activeSoundboardSounds.get(clipId);
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      activeSoundboardSounds.delete(clipId);
+    }
+  }
+
+  // Tap a tile: if nothing's playing, start it, layering on top of anything
+  // else already playing (each clip gets its own Audio instance — the shared
+  // player-audio element is reserved for lineup playback). Tap it again while
+  // playing: a short one-shot stinger restarts from the top, a longer
+  // loop-style sound stops.
+  function toggleSoundboardClip(clipId) {
+    var existing = activeSoundboardSounds.get(clipId);
+    if (existing) {
+      if (existing.duration && existing.duration <= SOUND_STINGER_MAX_SECONDS) {
+        existing.currentTime = 0;
+        existing.play().catch(function () {});
+      } else {
+        stopSoundboardClip(clipId);
+      }
+    } else {
+      var src = soundboardObjectUrlCache.get(clipId);
+      if (!src) return;
+      var audio = new Audio(src);
+      var clear = function () {
+        activeSoundboardSounds.delete(clipId);
+        renderSoundboardGrid();
+      };
+      audio.addEventListener('ended', clear);
+      audio.addEventListener('error', clear);
+      audio.play().catch(function () {});
+      activeSoundboardSounds.set(clipId, audio);
+    }
+    renderSoundboardGrid();
+  }
+
+  function bindSoundboardTileInteraction(tile, clipId) {
+    var pressTimer = null;
+    var longPressFired = false;
+
+    function clearTimer() {
+      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+    }
+
+    tile.addEventListener('pointerdown', function () {
+      longPressFired = false;
+      clearTimer();
+      pressTimer = setTimeout(function () {
+        longPressFired = true;
+        openSoundboardEditSheet(clipId);
+      }, LONG_PRESS_MS);
+    });
+
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evt) {
+      tile.addEventListener(evt, clearTimer);
+    });
+
+    tile.addEventListener('click', function () {
+      if (longPressFired) { longPressFired = false; return; }
+      toggleSoundboardClip(clipId);
+    });
+  }
+
+  function renderSoundboardGrid() {
+    var grid = document.getElementById('soundboard-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    soundboardClips.forEach(function (clip) {
+      var tile = document.createElement('div');
+      tile.className = 'soundboard-tile' + (activeSoundboardSounds.has(clip.id) ? ' playing' : '');
+      tile.setAttribute('role', 'button');
+      tile.dataset.clipId = clip.id;
+      var label = document.createElement('div');
+      label.className = 'soundboard-tile-label';
+      label.textContent = clip.label;
+      tile.appendChild(label);
+      bindSoundboardTileInteraction(tile, clip.id);
+      grid.appendChild(tile);
+    });
+  }
+
+  function openSoundboardAddSheet() {
+    soundboardEditingId = null;
+    document.getElementById('soundboard-edit-title').textContent = 'Add Sound';
+    document.getElementById('soundboard-clip-label').value = '';
+    document.getElementById('soundboard-clip-file').value = '';
+    document.getElementById('soundboard-file-label-text').textContent = 'Choose sound (MP3)';
+    document.getElementById('soundboard-delete-btn').classList.add('hidden');
+    showSheet('soundboard-edit-sheet');
+  }
+
+  function openSoundboardEditSheet(clipId) {
+    var clip = soundboardClips.filter(function (c) { return c.id === clipId; })[0];
+    if (!clip) return;
+    soundboardEditingId = clipId;
+    document.getElementById('soundboard-edit-title').textContent = 'Edit Sound';
+    document.getElementById('soundboard-clip-label').value = clip.label;
+    document.getElementById('soundboard-clip-file').value = '';
+    document.getElementById('soundboard-file-label-text').textContent = 'Replace sound (MP3)';
+    document.getElementById('soundboard-delete-btn').classList.remove('hidden');
+    showSheet('soundboard-edit-sheet');
+  }
+
+  function saveSoundboardClip(label, file) {
+    if (soundboardEditingId) {
+      var clip = soundboardClips.filter(function (c) { return c.id === soundboardEditingId; })[0];
+      if (!clip) return Promise.resolve();
+      clip.label = label;
+      if (file) {
+        stopSoundboardClip(clip.id);
+        var oldUrl = soundboardObjectUrlCache.get(clip.id);
+        if (oldUrl) URL.revokeObjectURL(oldUrl);
+        return idbPut(SOUND_STORE, { id: clip.id, label: label, blob: file }).then(function () {
+          soundboardObjectUrlCache.set(clip.id, URL.createObjectURL(file));
+        });
+      }
+      // Label-only edit — re-fetch the existing blob rather than trusting a
+      // cached copy, since idbPut overwrites the whole record.
+      return idbGet(SOUND_STORE, clip.id).then(function (rec) {
+        return idbPut(SOUND_STORE, { id: clip.id, label: label, blob: rec.blob });
+      });
+    }
+    var id = 'sound-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    return idbPut(SOUND_STORE, { id: id, label: label, blob: file }).then(function () {
+      soundboardObjectUrlCache.set(id, URL.createObjectURL(file));
+      soundboardClips.push({ id: id, label: label });
+    });
+  }
+
+  function deleteSoundboardClip(clipId) {
+    var clip = soundboardClips.filter(function (c) { return c.id === clipId; })[0];
+    if (!clip) return;
+    if (!confirm('Delete "' + clip.label + '"?')) return;
+    stopSoundboardClip(clip.id);
+    idbDelete(SOUND_STORE, clip.id).then(function () {
+      var url = soundboardObjectUrlCache.get(clip.id);
+      if (url) { URL.revokeObjectURL(url); soundboardObjectUrlCache.delete(clip.id); }
+      soundboardClips = soundboardClips.filter(function (c) { return c.id !== clip.id; });
+      renderSoundboardGrid();
+      closeSheet('soundboard-edit-sheet');
+    });
+  }
+
+  function bindSoundboardEvents() {
+    document.getElementById('btn-soundboard').addEventListener('click', function () {
+      document.getElementById('soundboard-panel').classList.add('open');
+    });
+    document.getElementById('soundboard-close').addEventListener('click', function () {
+      document.getElementById('soundboard-panel').classList.remove('open');
+    });
+    document.getElementById('soundboard-stop-all').addEventListener('click', function () {
+      activeSoundboardSounds.forEach(function (audio) { audio.pause(); audio.currentTime = 0; });
+      activeSoundboardSounds.clear();
+      renderSoundboardGrid();
+    });
+    document.getElementById('soundboard-add-btn').addEventListener('click', openSoundboardAddSheet);
+
+    var clipFileInput = document.getElementById('soundboard-clip-file');
+    clipFileInput.addEventListener('change', function () {
+      var f = clipFileInput.files[0];
+      var fallback = soundboardEditingId ? 'Replace sound (MP3)' : 'Choose sound (MP3)';
+      document.getElementById('soundboard-file-label-text').textContent = f ? f.name : fallback;
+    });
+
+    document.getElementById('soundboard-save-btn').addEventListener('click', function () {
+      var label = document.getElementById('soundboard-clip-label').value.trim();
+      var file = clipFileInput.files[0] || null;
+      if (!label) { alert('Please enter a label for this sound.'); return; }
+      if (!soundboardEditingId && !file) { alert('Please choose a sound file.'); return; }
+      saveSoundboardClip(label, file).then(function () {
+        renderSoundboardGrid();
+        closeSheet('soundboard-edit-sheet');
+      });
+    });
+
+    document.getElementById('soundboard-delete-btn').addEventListener('click', function () {
+      if (soundboardEditingId) deleteSoundboardClip(soundboardEditingId);
+    });
+  }
+
   // ---------- Add player form ----------
   function bindAddPlayerForm() {
     var fileInput = document.getElementById('new-player-file');
@@ -617,6 +884,20 @@
       fileLabelText.textContent = f ? f.name : 'Choose song (MP3)';
     });
 
+    var nameClipInput = document.getElementById('new-player-nameclip-file');
+    var nameClipLabelText = document.getElementById('name-clip-label-text');
+    var clearNameClipBtn = document.getElementById('clear-nameclip-btn');
+    nameClipInput.addEventListener('change', function () {
+      var f = nameClipInput.files[0];
+      nameClipLabelText.textContent = f ? f.name : 'Name announcement (optional)';
+      clearNameClipBtn.classList.toggle('hidden', !f);
+    });
+    clearNameClipBtn.addEventListener('click', function () {
+      nameClipInput.value = '';
+      nameClipLabelText.textContent = 'Name announcement (optional)';
+      clearNameClipBtn.classList.add('hidden');
+    });
+
     document.getElementById('add-player-form').addEventListener('submit', function (e) {
       e.preventDefault();
       var numberInput = document.getElementById('new-player-number');
@@ -624,6 +905,7 @@
       var number = numberInput.value.trim();
       var name = nameInput.value.trim();
       var file = fileInput.files[0];
+      var nameClipFile = nameClipInput.files[0] || null;
       if (!name || !file) {
         alert('Please fill in a name and choose a song file. (Jersey # is optional — leave it blank for team songs like Walkout or Victory.)');
         return;
@@ -635,32 +917,33 @@
         }
       }
       var id = 'local-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
-      idbPut({ id: id, number: number, name: name, blob: file }).then(function () {
+      var record = { id: id, number: number, name: name, blob: file };
+      if (nameClipFile) record.nameClipBlob = nameClipFile;
+      idbPut(STORE, record).then(function () {
         var url = URL.createObjectURL(file);
         objectUrlCache.set(id, url);
-        localPlayers.push({ id: id, number: number, name: name, source: 'local' });
+        var hasNameClip = false;
+        if (nameClipFile) {
+          var nameUrl = URL.createObjectURL(nameClipFile);
+          nameClipObjectUrlCache.set(id, nameUrl);
+          hasNameClip = true;
+        }
+        localPlayers.push({ id: id, number: number, name: name, source: 'local', hasNameClip: hasNameClip });
         rebuildLibrary();
         renderManageList();
         numberInput.value = '';
         nameInput.value = '';
         fileInput.value = '';
         fileLabelText.textContent = 'Choose song (MP3)';
+        nameClipInput.value = '';
+        nameClipLabelText.textContent = 'Name announcement (optional)';
+        clearNameClipBtn.classList.add('hidden');
       });
     });
   }
 
   // ---------- Static event bindings ----------
   function bindEvents() {
-    document.getElementById('player-audio').addEventListener('ended', function () {
-      var finishedSlot = currentPlayingSlot;
-      currentPlayingSlot = null;
-      // Only auto-advance if the user hasn't already tapped ahead to a
-      // different slot while this song was finishing out.
-      if (selectedSlot === finishedSlot) advanceToNextLineupSlot(finishedSlot);
-      renderGrid();
-      updateActionBar();
-    });
-
     document.getElementById('action-play').addEventListener('click', toggleActionPlay);
     document.getElementById('action-edit').addEventListener('click', openEditForSelected);
 
@@ -726,6 +1009,7 @@
     });
 
     bindAddPlayerForm();
+    bindSoundboardEvents();
   }
 
   function registerServiceWorker() {
@@ -789,22 +1073,36 @@
       .catch(function () { return []; })
       .then(function (data) {
         bundledPlayers = (data || []).map(function (p) {
-          return { id: p.id, number: p.number, name: p.name, file: p.file, source: 'bundled' };
+          return { id: p.id, number: p.number, name: p.name, file: p.file, nameClipFile: p.nameClipFile || null, source: 'bundled' };
         });
-        return idbGetAll();
+        return idbGetAll(STORE);
       })
       .then(function (records) {
         localPlayers = records.map(function (r) {
           var url = URL.createObjectURL(r.blob);
           objectUrlCache.set(r.id, url);
-          return { id: r.id, number: r.number, name: r.name, source: 'local' };
+          var hasNameClip = false;
+          if (r.nameClipBlob) {
+            nameClipObjectUrlCache.set(r.id, URL.createObjectURL(r.nameClipBlob));
+            hasNameClip = true;
+          }
+          return { id: r.id, number: r.number, name: r.name, source: 'local', hasNameClip: hasNameClip };
         });
       })
       .catch(function () { localPlayers = []; })
+      .then(function () { return idbGetAll(SOUND_STORE); })
+      .then(function (records) {
+        soundboardClips = (records || []).map(function (r) {
+          soundboardObjectUrlCache.set(r.id, URL.createObjectURL(r.blob));
+          return { id: r.id, label: r.label };
+        });
+      })
+      .catch(function () { soundboardClips = []; })
       .then(function () {
         rebuildLibrary();
         renderGrid();
         renderManageList();
+        renderSoundboardGrid();
         bindEvents();
         updateActionBar();
         updateStopAdvanceSwitch();

@@ -20,11 +20,24 @@
     <h1><img src="icons/storm-wordmark.png" alt="STORM" class="brand-logo"></h1>
   </div>
   <div class="topbar-actions">
+    <button id="btn-soundboard" class="icon-btn" title="Soundboard">&#128266;</button>
     <button id="btn-manage-team" class="icon-btn" title="Manage Team">&#9881;</button>
   </div>
 </header>
 
-<main id="lineup-grid" class="lineup-grid"></main>
+<div id="stage" class="stage">
+  <main id="lineup-grid" class="lineup-grid"></main>
+
+  <div id="soundboard-panel" class="soundboard-panel">
+    <div class="soundboard-topbar">
+      <h2>Soundboard</h2>
+      <button id="soundboard-close" class="sheet-close">&times;</button>
+    </div>
+    <button id="soundboard-stop-all" type="button" class="stop-all-btn">Stop All</button>
+    <div id="soundboard-grid" class="soundboard-grid"></div>
+    <button id="soundboard-add-btn" type="button" class="add-clip-tile">+ Add Sound</button>
+  </div>
+</div>
 
 <footer id="action-bar" class="action-bar">
   <button id="action-edit" class="action-edit-btn" disabled title="Change assigned song">&#9998;</button>
@@ -86,8 +99,32 @@
         <span id="file-label-text">Choose song (MP3)</span>
         <input id="new-player-file" type="file" accept="audio/*,.mp3">
       </label>
+      <label class="file-label">
+        <span id="name-clip-label-text">Name announcement (optional)</span>
+        <input id="new-player-nameclip-file" type="file" accept="audio/*,.mp3">
+      </label>
+      <button type="button" id="clear-nameclip-btn" class="clear-nameclip-btn hidden">&times; Clear name clip</button>
       <button type="submit" class="primary-btn">Add Player</button>
     </form>
+  </div>
+</div>
+
+<!-- Soundboard add/edit clip bottom sheet -->
+<div id="soundboard-edit-sheet" class="sheet-overlay hidden">
+  <div class="sheet">
+    <div class="sheet-header">
+      <h2 id="soundboard-edit-title">Add Sound</h2>
+      <button class="sheet-close" data-close="soundboard-edit-sheet">&times;</button>
+    </div>
+    <div class="form-row">
+      <input id="soundboard-clip-label" type="text" placeholder="Label (e.g. Airhorn)" style="flex:1;">
+    </div>
+    <label class="file-label">
+      <span id="soundboard-file-label-text">Choose sound (MP3)</span>
+      <input id="soundboard-clip-file" type="file" accept="audio/*,.mp3">
+    </label>
+    <button type="button" id="soundboard-save-btn" class="primary-btn">Save</button>
+    <button type="button" id="soundboard-delete-btn" class="list-row delete-row hidden centered-delete">Delete this sound</button>
   </div>
 </div>
 

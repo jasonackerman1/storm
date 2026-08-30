@@ -90,15 +90,138 @@ body {
 
 .icon-btn:active { background: rgba(248,176,0,0.22); }
 
+.hidden { display: none !important; }
+
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .lineup-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(6, 1fr);
   gap: 8px;
   padding: 8px;
+  position: absolute;
+  inset: 0;
+}
+
+/* Soundboard slide panel — same slide-in interaction as a bottom sheet, but
+   sliding in from the right over the lineup grid rather than up from the
+   bottom, since it replaces the whole roster view rather than layering a
+   dialog on top of it. */
+.soundboard-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  z-index: 10;
+}
+
+.soundboard-panel.open { transform: translateX(0); }
+
+.soundboard-topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--accent-dim);
+}
+
+.soundboard-topbar h2 { margin: 0; font-size: 1.05rem; }
+
+.stop-all-btn {
+  flex: 0 0 auto;
+  margin: 10px 12px 0 12px;
+  background: var(--red);
+  color: var(--text);
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.stop-all-btn:active { opacity: 0.85; }
+
+.soundboard-grid {
   flex: 1 1 auto;
   min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 12px;
+  align-content: start;
 }
+
+.soundboard-tile {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 2px, transparent 2px 6px),
+    linear-gradient(160deg, #1c1815, #0e0b09);
+  box-shadow: inset 0 0 0 2px rgba(248,176,0,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  touch-action: none;
+}
+
+/* Visual "playing" state so multiple simultaneously layered sounds are each
+   visible at a glance, same red/accent language as a playing lineup slot. */
+.soundboard-tile.playing {
+  background: linear-gradient(160deg, var(--red), var(--red-dim));
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+
+.soundboard-tile-label {
+  font-size: clamp(0.62rem, 3vw, 0.78rem);
+  font-weight: 700;
+  text-align: center;
+  color: var(--text);
+  line-height: 1.2;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.add-clip-tile {
+  flex: 0 0 auto;
+  margin: 0 12px calc(env(safe-area-inset-bottom) + 12px) 12px;
+  background: rgba(248,176,0,0.1);
+  border: 1px dashed rgba(248,176,0,0.4);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 12px;
+  font-weight: 700;
+}
+
+.add-clip-tile:active { background: rgba(248,176,0,0.22); }
+
+.clear-nameclip-btn {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 0 10px 0;
+  text-align: center;
+}
+
+.centered-delete { justify-content: center; width: 100%; margin-top: 8px; }
 
 .slot-btn {
   position: relative;
