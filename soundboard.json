@@ -1,4 +1,15 @@
 [
-  { "id": "sfx-crackbat", "label": "Crack of the Bat", "file": "sfx/crack-of-the-bat.mp3" },
-  { "id": "sfx-crowdcheer", "label": "Crowd Cheer", "file": "sfx/crowd-cheer.mp3" }
+  { "id": "sfx-crackbat", "label": "Crack of the Bat", "icon": "💥", "file": "sfx/crack-of-the-bat.mp3" },
+  { "id": "sfx-crowdcheer", "label": "Crowd Cheer", "icon": "🎉", "file": "sfx/crowd-cheer.mp3" },
+  { "id": "sfx-airhorn", "label": "Air Horn", "icon": "📣", "file": "sfx/mlg-airhorn.mp3" },
+  { "id": "sfx-airraidsiren", "label": "Air Raid Siren", "icon": "🚨", "file": "sfx/air-raid-siren-sound.mp3" },
+  { "id": "sfx-finaljeopardy", "label": "Final Jeopardy", "icon": "⏳", "file": "sfx/Final-jeopardy.mp3" },
+  { "id": "sfx-finishhim", "label": "Finish Him!", "icon": "🥊", "file": "sfx/FinishHim.mp3" },
+  { "id": "sfx-impressive", "label": "Impressive", "icon": "👏", "file": "sfx/Inpressive.mp3" },
+  { "id": "sfx-outstanding", "label": "Outstanding!", "icon": "🌟", "file": "sfx/Outstanding.mp3" },
+  { "id": "sfx-suspense", "label": "Suspense", "icon": "😨", "file": "sfx/Suspense.mp3" },
+  { "id": "sfx-mlbsoundbite", "label": "MLB Sound Bite", "icon": "⚾", "file": "sfx/mlb.swf.mp3" },
+  { "id": "sfx-champions", "label": "We Are the Champions", "icon": "🏆", "file": "sfx/wearechamps.mp3" },
+  { "id": "sfx-xfiles", "label": "X-Files Theme", "icon": "🛸", "file": "sfx/xfiles.mp3" },
+  { "id": "sfx-yeet", "label": "Yeet", "icon": "🚀", "file": "sfx/yeet.wav" }
 ]

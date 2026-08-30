@@ -791,6 +791,12 @@
       tile.className = 'soundboard-tile' + (activeSoundboardSounds.has(clip.id) ? ' playing' : '');
       tile.setAttribute('role', 'button');
       tile.dataset.clipId = clip.id;
+      if (clip.icon) {
+        var icon = document.createElement('div');
+        icon.className = 'soundboard-tile-icon';
+        icon.textContent = clip.icon;
+        tile.appendChild(icon);
+      }
       var label = document.createElement('div');
       label.className = 'soundboard-tile-label';
       label.textContent = clip.label;
@@ -1124,7 +1130,7 @@
       .catch(function () { return []; })
       .then(function (data) {
         bundledSoundboardClips = (data || []).map(function (c) {
-          return { id: c.id, label: c.label, file: c.file, source: 'bundled' };
+          return { id: c.id, label: c.label, icon: c.icon || null, file: c.file, source: 'bundled' };
         });
         return idbGetAll(SOUND_STORE);
       })
