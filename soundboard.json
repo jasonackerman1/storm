@@ -11,5 +11,6 @@
   { "id": "sfx-mlbsoundbite", "label": "MLB Sound Bite", "icon": "⚾", "file": "sfx/mlb.swf.mp3" },
   { "id": "sfx-champions", "label": "We Are the Champions", "icon": "🏆", "file": "sfx/wearechamps.mp3" },
   { "id": "sfx-xfiles", "label": "X-Files Theme", "icon": "🛸", "file": "sfx/xfiles.mp3" },
-  { "id": "sfx-yeet", "label": "Yeet", "icon": "🚀", "file": "sfx/yeet.wav" }
+  { "id": "sfx-yeet", "label": "Yeet", "icon": "🚀", "file": "sfx/yeet.wav" },
+  { "id": "sfx-thunder", "label": "Thunder", "icon": "⛈️", "file": "sfx/thunder.mp3" }
 ]
