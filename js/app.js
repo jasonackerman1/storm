@@ -1054,6 +1054,20 @@
     document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
   }
 
+  // A resume-triggered event (visibilitychange, pageshow) can fire before
+  // the WKWebView has actually finished resizing back to full height — a
+  // synchronous read of innerHeight right then can still capture the stale,
+  // backgrounded value, which is a plausible reason the earlier fix (an
+  // immediate read on those same events) didn't fully close this out.
+  // Deferring past a couple of animation frames lets the real layout settle
+  // first; the immediate call stays too, since it's harmless when the value
+  // was already correct.
+  function scheduleViewportHeightRecalc() {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(setViewportHeightVar);
+    });
+  }
+
   // ---------- Keep screen awake ----------
   // Without this, iOS locks the screen after ~30s of no touches — easy to
   // hit between at-bats — and the next tap has to unlock the phone first.
@@ -1076,6 +1090,7 @@
       if (document.visibilityState === 'visible') {
         requestWakeLock();
         setViewportHeightVar();
+        scheduleViewportHeightRecalc();
       }
     });
   }
@@ -1085,7 +1100,16 @@
     setViewportHeightVar();
     window.addEventListener('resize', setViewportHeightVar);
     window.addEventListener('orientationchange', setViewportHeightVar);
-    window.addEventListener('pageshow', setViewportHeightVar);
+    window.addEventListener('pageshow', function () {
+      setViewportHeightVar();
+      scheduleViewportHeightRecalc();
+    });
+    // visualViewport reports the WKWebView's real visible geometry more
+    // reliably than window.resize on iOS, which doesn't consistently fire
+    // for every layout change a resumed PWA can go through.
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', setViewportHeightVar);
+    }
 
     slots = loadSlots();
     stopAdvancesEnabled = loadStopAdvancesSetting();
