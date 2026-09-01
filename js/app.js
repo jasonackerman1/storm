@@ -60,7 +60,7 @@
   var soundboardClips = []; // { id, label, source }
   var soundboardObjectUrlCache = new Map();
   var activeSoundboardSounds = new Map(); // clipId -> playing Audio element
-  var soundboardEditingId = null; // null while the sheet is in "add" mode
+  var soundboardEditingId = null;
   // A clip whose duration is at or under this is treated as a one-shot
   // stinger (retap restarts it); anything longer is treated as a loop-style
   // sound (retap stops it). Duration isn't known until the browser loads the
@@ -806,16 +806,6 @@
     });
   }
 
-  function openSoundboardAddSheet() {
-    soundboardEditingId = null;
-    document.getElementById('soundboard-edit-title').textContent = 'Add Sound';
-    document.getElementById('soundboard-clip-label').value = '';
-    document.getElementById('soundboard-clip-file').value = '';
-    document.getElementById('soundboard-file-label-text').textContent = 'Choose sound (MP3)';
-    document.getElementById('soundboard-delete-btn').classList.add('hidden');
-    showSheet('soundboard-edit-sheet');
-  }
-
   function openSoundboardEditSheet(clipId) {
     var clip = localSoundboardClips.filter(function (c) { return c.id === clipId; })[0];
     if (!clip) return;
@@ -875,17 +865,14 @@
 
   function bindSoundboardEvents() {
     document.getElementById('btn-soundboard').addEventListener('click', function () {
-      document.getElementById('soundboard-panel').classList.add('open');
-    });
-    document.getElementById('soundboard-close').addEventListener('click', function () {
-      document.getElementById('soundboard-panel').classList.remove('open');
+      var isOpen = document.getElementById('soundboard-panel').classList.toggle('open');
+      this.classList.toggle('active', isOpen);
     });
     document.getElementById('soundboard-stop-all').addEventListener('click', function () {
       activeSoundboardSounds.forEach(function (audio) { audio.pause(); audio.currentTime = 0; });
       activeSoundboardSounds.clear();
       renderSoundboardGrid();
     });
-    document.getElementById('soundboard-add-btn').addEventListener('click', openSoundboardAddSheet);
 
     var clipFileInput = document.getElementById('soundboard-clip-file');
     clipFileInput.addEventListener('change', function () {
