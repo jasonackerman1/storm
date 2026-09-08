@@ -700,9 +700,9 @@
 
   // ---------- Soundboard ----------
   function rebuildSoundboardLibrary() {
-    soundboardClips = bundledSoundboardClips.concat(localSoundboardClips).sort(function (a, b) {
-      return a.label.localeCompare(b.label);
-    });
+    soundboardClips = bundledSoundboardClips.concat(
+      localSoundboardClips.slice().sort(function (a, b) { return a.label.localeCompare(b.label); })
+    );
   }
 
   function soundboardSrcFor(clip) {
