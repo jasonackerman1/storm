@@ -13,5 +13,5 @@
   { "id": "sfx-xfiles", "label": "X-Files Theme", "icon": "🛸", "file": "sfx/xfiles.mp3" },
   { "id": "sfx-yeet", "label": "Yeet", "icon": "🚀", "file": "sfx/yeet.wav" },
   { "id": "sfx-thunder", "label": "Thunder", "icon": "⛈️", "file": "sfx/thunder.mp3" },
-  { "id": "sfx-chewy", "label": "Chewy", "icon": "🔊", "file": "sfx/chewy.mp3" }
+  { "id": "sfx-chewy", "label": "Chewy", "icon": "🐻", "file": "sfx/chewy.mp3" }
 ]
