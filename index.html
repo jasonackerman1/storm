@@ -15,6 +15,17 @@
 </head>
 <body>
 
+<!-- Startup splash: hides the app until every bundled song/sfx file is
+     confirmed present in the offline cache. The tornado fills from gray to
+     full color as media is checked/downloaded, then fades out. -->
+<div id="splash-screen" class="splash-screen">
+  <div class="splash-logo-wrap">
+    <img src="icons/tornado.png" class="splash-logo splash-logo-gray" alt="">
+    <img id="splash-logo-color" src="icons/tornado.png" class="splash-logo splash-logo-color" alt="">
+  </div>
+  <div id="splash-status" class="splash-status">Loading&hellip;</div>
+</div>
+
 <header class="topbar">
   <div class="topbar-brand">
     <h1><img src="icons/storm-wordmark.png" alt="STORM" class="brand-logo"></h1>

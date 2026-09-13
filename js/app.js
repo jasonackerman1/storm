@@ -10,6 +10,13 @@
   var STOP_ADVANCES_KEY = 'storm-stop-advances';
   var DEFAULT_LINEUP_VERSION_KEY = 'storm-default-lineup-version';
 
+  // MUST match CACHE_NAME in sw.js — bump both together. Used by the startup
+  // splash to write confirmed-fresh media straight into the same cache
+  // bucket the service worker serves from, without needing a message
+  // round-trip through a service worker that may not be controlling yet
+  // (e.g. the very first install, before any SW has activated).
+  var CACHE_NAME = 'storm-cache-v39';
+
   // The real, current batting order — bump DEFAULT_LINEUP_VERSION whenever
   // this changes so it gets applied once on every device (even ones with
   // leftover state from earlier testing), without ever clobbering whatever
@@ -1095,6 +1102,94 @@
     });
   }
 
+  // ---------- Startup splash ----------
+  // Hides the app behind a full-screen splash until every bundled song/sfx
+  // file is confirmed present in the offline cache — the tornado logo
+  // (a grayscale layer under a color layer, the color layer clipped by
+  // progress) fills in bottom-to-top as each file is checked/downloaded.
+  // A file already cached from a prior launch resolves near-instantly; only
+  // genuinely new/missing media triggers a real network fetch, so this
+  // never re-downloads the whole roster over cellular just because the app
+  // was reopened at the field.
+  var SPLASH_MIN_MS = 500;
+  var SPLASH_MAX_MS = 12000;
+
+  function setSplashProgress(pct) {
+    var colorLayer = document.getElementById('splash-logo-color');
+    if (colorLayer) colorLayer.style.clipPath = 'inset(' + (100 - pct) + '% 0 0 0)';
+    var label = document.getElementById('splash-status');
+    if (label) label.textContent = pct >= 100 ? 'Ready' : 'Loading media… ' + pct + '%';
+  }
+
+  function hideSplash() {
+    var splash = document.getElementById('splash-screen');
+    if (!splash) return;
+    splash.classList.add('splash-done');
+    setTimeout(function () { splash.remove(); }, 450);
+  }
+
+  // Resolves once `url` is confirmed cached — either it already was, or a
+  // fresh fetch just wrote it in. Never rejects and never waits past 6s for
+  // a single file, so one slow/dead URL can't hang the whole sequence.
+  function ensureCachedWithTimeout(url, cache) {
+    return cache.match(url).then(function (cached) {
+      if (cached) return;
+      return new Promise(function (resolve) {
+        var settled = false;
+        var controller = ('AbortController' in window) ? new AbortController() : null;
+        var timer = setTimeout(function () {
+          settled = true;
+          if (controller) controller.abort();
+          resolve();
+        }, 6000);
+        fetch(url, { cache: 'no-store', signal: controller ? controller.signal : undefined })
+          .then(function (res) { if (!settled && res && res.ok) cache.put(url, res); })
+          .catch(function () {})
+          .then(function () { if (!settled) { clearTimeout(timer); resolve(); } });
+      });
+    });
+  }
+
+  function runStartupMediaCheck() {
+    var startedAt = Date.now();
+    var songFiles = bundledPlayers.filter(function (p) { return p.file; }).map(function (p) { return './' + p.file; });
+    var sfxFiles = bundledSoundboardClips.filter(function (c) { return c.file; }).map(function (c) { return './' + c.file; });
+    var files = songFiles.concat(sfxFiles);
+
+    function reveal() {
+      var elapsed = Date.now() - startedAt;
+      setTimeout(hideSplash, Math.max(0, SPLASH_MIN_MS - elapsed));
+    }
+
+    if (files.length === 0 || !('caches' in window)) {
+      setSplashProgress(100);
+      reveal();
+      return;
+    }
+
+    var done = 0;
+    var total = files.length;
+
+    var checkAll = caches.open(CACHE_NAME).then(function (cache) {
+      return Promise.all(files.map(function (url) {
+        return ensureCachedWithTimeout(url, cache).then(function () {
+          done++;
+          setSplashProgress(Math.round((done / total) * 100));
+        });
+      }));
+    }).catch(function () {});
+
+    // Whichever finishes first — every file confirmed, or this hard ceiling
+    // — reveals the app. Guarantees a bad connection (or a captive portal
+    // that never actually errors) can't leave the splash up indefinitely.
+    var hardCeiling = new Promise(function (resolve) { setTimeout(resolve, SPLASH_MAX_MS); });
+
+    Promise.race([checkAll, hardCeiling]).then(function () {
+      setSplashProgress(100);
+      reveal();
+    });
+  }
+
   // ---------- Init ----------
   function init() {
     setViewportHeightVar();
@@ -1163,6 +1258,7 @@
         updateStopAdvanceSwitch();
         registerServiceWorker();
         bindWakeLock();
+        runStartupMediaCheck();
       });
   }
 

@@ -23,6 +23,68 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* ---------- Startup splash ---------- */
+/* Sits above everything (z-index 9999, well above the highest z-index used
+   elsewhere in this file) until js/app.js confirms every bundled song/sfx
+   file is present in the offline cache. Files already cached from a prior
+   launch resolve near-instantly; only genuinely new/missing media triggers
+   a real network wait, so this never re-downloads the whole roster over
+   cellular at the field just because the app was reopened. */
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  background: var(--bg);
+  transition: opacity 0.4s ease;
+}
+
+.splash-screen.splash-done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.splash-logo-wrap {
+  position: relative;
+  width: 42vw;
+  max-width: 170px;
+  aspect-ratio: 1;
+}
+
+.splash-logo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.splash-logo-gray {
+  filter: grayscale(1) brightness(0.8);
+  opacity: 0.85;
+}
+
+.splash-logo-color {
+  /* Reveals bottom-to-top as progress climbs: inset(100% ...) hides the
+     whole image, inset(0% ...) shows all of it. JS drives the top inset
+     down from 100 to 0 as each file is checked/downloaded. */
+  clip-path: inset(100% 0 0 0);
+  transition: clip-path 0.3s ease-out;
+  filter: drop-shadow(0 0 12px rgba(248, 176, 0, 0.4));
+}
+
+.splash-status {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
 html, body {
   margin: 0;
   padding: 0;
