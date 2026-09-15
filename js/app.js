@@ -74,6 +74,13 @@
   var nameClipBufferCache = new Map();
   var soundboardBufferCache = new Map();
   var activeBufferSource = null;
+  // Second concurrent source, used only by the announcer-overlap A/B test
+  // (see announcerOverlapFraction below) — activeBufferSource always
+  // represents the PRIMARY clip (the walk-up song, whose completion is what
+  // actually ends the at-bat / drives auto-advance); this tracks the
+  // secondary clip (the name announcement) purely so a manual Stop can
+  // silence it too when it's still playing concurrently.
+  var secondaryBufferSource = null;
 
   // ---------- Soundboard state ----------
   // Mirrors the bundled/local split already used for players: bundled clips
@@ -318,6 +325,11 @@
       try { activeBufferSource.stop(); } catch (e) {}
       activeBufferSource = null;
     }
+    if (secondaryBufferSource) {
+      secondaryBufferSource.onended = null;
+      try { secondaryBufferSource.stop(); } catch (e) {}
+      secondaryBufferSource = null;
+    }
     activeSequenceOnComplete = null;
     audio.pause();
     audio.currentTime = 0;
@@ -379,6 +391,41 @@
     playNext();
   }
 
+  // Announcer-overlap A/B test (Jason, 2026-09-15) — plays the name clip and
+  // walk-up song concurrently instead of back-to-back, starting the song
+  // `delaySeconds` after the name clip begins (0 = fully simultaneous).
+  // Both sources are scheduled off the SAME audioCtx.currentTime reference
+  // via source.start(), which is sample-accurate — far more reliable than a
+  // setTimeout-based delay for keeping two clips in sync. activeBufferSource
+  // always tracks the song (the primary clip — its completion is what
+  // actually ends the at-bat and drives auto-advance); secondaryBufferSource
+  // tracks the name clip purely so stopPlayback() can silence it too if it's
+  // still playing when the user manually stops. Buffer-path only — this is
+  // a one-off test on 2 specific players, not worth building a second,
+  // less-tested <audio>-element overlap fallback for.
+  function playOverlappingBuffers(nameClipBuffer, songBuffer, delaySeconds, onComplete) {
+    var startAt = audioCtx.currentTime;
+
+    var nameSource = audioCtx.createBufferSource();
+    nameSource.buffer = nameClipBuffer;
+    nameSource.connect(audioCtx.destination);
+    secondaryBufferSource = nameSource;
+    nameSource.onended = function () {
+      if (secondaryBufferSource === nameSource) secondaryBufferSource = null;
+    };
+    nameSource.start(startAt);
+
+    var songSource = audioCtx.createBufferSource();
+    songSource.buffer = songBuffer;
+    songSource.connect(audioCtx.destination);
+    activeBufferSource = songSource;
+    songSource.onended = function () {
+      if (activeBufferSource === songSource) activeBufferSource = null;
+      if (onComplete) onComplete();
+    };
+    songSource.start(startAt + delaySeconds);
+  }
+
   function songSrcFor(player) {
     if (!player) return null;
     return player.source === 'bundled' ? player.file : objectUrlCache.get(player.id);
@@ -425,6 +472,20 @@
     var needsNameClip = !!nameClipSrcFor(player);
     var songBuffer = songBufferFor(player);
     var nameClipBuffer = nameClipBufferFor(player);
+
+    // Announcer-overlap A/B test: only kicks in when a player's roster.json
+    // entry explicitly sets announcerOverlapFraction (a number 0-1 — 0 means
+    // the song starts the instant the name clip does; 0.5 means it starts
+    // once the name clip is halfway done; omitted entirely means the normal
+    // sequential behavior below, unchanged for every other player). Falls
+    // through to the normal sequential path if buffers aren't available.
+    if (audioCtx && songBuffer && needsNameClip && nameClipBuffer &&
+        typeof player.announcerOverlapFraction === 'number') {
+      var delay = nameClipBuffer.duration * player.announcerOverlapFraction;
+      playOverlappingBuffers(nameClipBuffer, songBuffer, delay, onFinished);
+      return;
+    }
+
     if (audioCtx && songBuffer && (!needsNameClip || nameClipBuffer)) {
       playSequenceBuffers([nameClipBuffer, songBuffer], onFinished);
     } else {
@@ -1515,6 +1576,9 @@
             id: p.id, number: p.number, name: p.name, file: p.file,
             nameClipFile: p.nameClipFile || null,
             guestSong: p.guestSong || null, guestDefault: !!p.guestDefault,
+            // See playOverlappingBuffers/firePlayback — undefined for every
+            // player except the 2026-09-15 announcer-overlap A/B test.
+            announcerOverlapFraction: typeof p.announcerOverlapFraction === 'number' ? p.announcerOverlapFraction : undefined,
             source: 'bundled'
           };
         });
