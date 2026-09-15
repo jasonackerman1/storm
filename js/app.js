@@ -8,6 +8,7 @@
   var SOUND_STORE = 'soundboard';
   var SLOTS_KEY = 'storm-slots-v2';
   var STOP_ADVANCES_KEY = 'storm-stop-advances';
+  var ANNOUNCER_OVERLAP_KEY = 'storm-announcer-overlap';
   var DEFAULT_LINEUP_VERSION_KEY = 'storm-default-lineup-version';
 
   // MUST match CACHE_NAME in sw.js — bump both together. Used by the startup
@@ -54,6 +55,7 @@
   var selectedSlot = null;
   var dragState = null;
   var stopAdvancesEnabled = true;
+  var announcerOverlapEnabled = true;
   var objectUrlCache = new Map();
   var nameClipObjectUrlCache = new Map();
   var activeSequenceOnComplete = null;
@@ -227,6 +229,25 @@
 
   function saveStopAdvancesSetting() {
     localStorage.setItem(STOP_ADVANCES_KEY, stopAdvancesEnabled ? '1' : '0');
+  }
+
+  // Default ON: overlapping announcer/song playback (halfway-through, the
+  // 2026-09-15 A/B-tested standard) is what every real player's
+  // announcerOverlapFraction drives in firePlayback(). Turning this off
+  // falls back to the plain sequential path (full name clip, then song)
+  // regardless of what announcerOverlapFraction is set to per player.
+  function loadAnnouncerOverlapSetting() {
+    try {
+      var raw = localStorage.getItem(ANNOUNCER_OVERLAP_KEY);
+      if (raw === null) return true;
+      return raw === '1';
+    } catch (e) {
+      return true;
+    }
+  }
+
+  function saveAnnouncerOverlapSetting() {
+    localStorage.setItem(ANNOUNCER_OVERLAP_KEY, announcerOverlapEnabled ? '1' : '0');
   }
 
   function rebuildLibrary() {
@@ -483,7 +504,7 @@
     // done). Team songs and any player without a name clip never set this,
     // so they fall through to the normal sequential path below unchanged —
     // as would a buffer-decode failure for either clip.
-    if (audioCtx && songBuffer && needsNameClip && nameClipBuffer &&
+    if (announcerOverlapEnabled && audioCtx && songBuffer && needsNameClip && nameClipBuffer &&
         typeof player.announcerOverlapFraction === 'number') {
       var delay = nameClipBuffer.duration * player.announcerOverlapFraction;
       playOverlappingBuffers(nameClipBuffer, songBuffer, delay, onFinished);
@@ -528,6 +549,12 @@
     var el = document.getElementById('setting-stop-advance');
     if (!el) return;
     el.checked = stopAdvancesEnabled;
+  }
+
+  function updateAnnouncerOverlapSwitch() {
+    var el = document.getElementById('setting-announcer-overlap');
+    if (!el) return;
+    el.checked = announcerOverlapEnabled;
   }
 
   // A song that finishes on its own (not manually stopped) means that
@@ -1216,6 +1243,11 @@
       saveStopAdvancesSetting();
     });
 
+    document.getElementById('setting-announcer-overlap').addEventListener('change', function (e) {
+      announcerOverlapEnabled = e.target.checked;
+      saveAnnouncerOverlapSetting();
+    });
+
     document.getElementById('btn-refresh-content').addEventListener('click', function () {
       var btn = this;
       btn.disabled = true;
@@ -1566,6 +1598,7 @@
 
     slots = loadSlots();
     stopAdvancesEnabled = loadStopAdvancesSetting();
+    announcerOverlapEnabled = loadAnnouncerOverlapSetting();
 
     fetch('roster.json', { cache: 'no-store' })
       .then(function (res) { return res.ok ? res.json() : []; })
@@ -1631,6 +1664,7 @@
         bindEvents();
         updateActionBar();
         updateStopAdvanceSwitch();
+        updateAnnouncerOverlapSwitch();
         registerServiceWorker();
         bindWakeLock();
         runStartupMediaCheck();
