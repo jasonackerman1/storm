@@ -74,12 +74,13 @@
   var nameClipBufferCache = new Map();
   var soundboardBufferCache = new Map();
   var activeBufferSource = null;
-  // Second concurrent source, used only by the announcer-overlap A/B test
-  // (see announcerOverlapFraction below) — activeBufferSource always
-  // represents the PRIMARY clip (the walk-up song, whose completion is what
-  // actually ends the at-bat / drives auto-advance); this tracks the
-  // secondary clip (the name announcement) purely so a manual Stop can
-  // silence it too when it's still playing concurrently.
+  // Second concurrent source, used whenever a player's announcerOverlapFraction
+  // starts their song while the name clip is still playing (see below) —
+  // activeBufferSource always represents the PRIMARY clip (the walk-up
+  // song, whose completion is what actually ends the at-bat / drives
+  // auto-advance); this tracks the secondary clip (the name announcement)
+  // purely so a manual Stop can silence it too when it's still playing
+  // concurrently.
   var secondaryBufferSource = null;
 
   // ---------- Soundboard state ----------
@@ -391,18 +392,21 @@
     playNext();
   }
 
-  // Announcer-overlap A/B test (Jason, 2026-09-15) — plays the name clip and
-  // walk-up song concurrently instead of back-to-back, starting the song
-  // `delaySeconds` after the name clip begins (0 = fully simultaneous).
-  // Both sources are scheduled off the SAME audioCtx.currentTime reference
-  // via source.start(), which is sample-accurate — far more reliable than a
-  // setTimeout-based delay for keeping two clips in sync. activeBufferSource
-  // always tracks the song (the primary clip — its completion is what
-  // actually ends the at-bat and drives auto-advance); secondaryBufferSource
-  // tracks the name clip purely so stopPlayback() can silence it too if it's
-  // still playing when the user manually stops. Buffer-path only — this is
-  // a one-off test on 2 specific players, not worth building a second,
-  // less-tested <audio>-element overlap fallback for.
+  // Plays the name clip and walk-up song concurrently instead of back-to-
+  // back, starting the song `delaySeconds` after the name clip begins (0 =
+  // fully simultaneous). Settled 2026-09-15 after Jason A/B tested this
+  // against fully-simultaneous (0) and plain sequential — halfway-through
+  // (fraction 0.5, see announcerOverlapFraction) won and is now the
+  // standard for every real roster player. Both sources are scheduled off
+  // the SAME audioCtx.currentTime reference via source.start(), which is
+  // sample-accurate — far more reliable than a setTimeout-based delay for
+  // keeping two clips in sync. activeBufferSource always tracks the song
+  // (the primary clip — its completion is what actually ends the at-bat
+  // and drives auto-advance); secondaryBufferSource tracks the name clip
+  // purely so stopPlayback() can silence it too if it's still playing when
+  // the user manually stops. Buffer-path only, no <audio>-element fallback
+  // — every real player already decodes successfully in practice, so this
+  // hasn't been a real gap.
   function playOverlappingBuffers(nameClipBuffer, songBuffer, delaySeconds, onComplete) {
     var startAt = audioCtx.currentTime;
 
@@ -473,12 +477,12 @@
     var songBuffer = songBufferFor(player);
     var nameClipBuffer = nameClipBufferFor(player);
 
-    // Announcer-overlap A/B test: only kicks in when a player's roster.json
-    // entry explicitly sets announcerOverlapFraction (a number 0-1 — 0 means
-    // the song starts the instant the name clip does; 0.5 means it starts
-    // once the name clip is halfway done; omitted entirely means the normal
-    // sequential behavior below, unchanged for every other player). Falls
-    // through to the normal sequential path if buffers aren't available.
+    // Overlapping announcer/song playback: only kicks in when a player's
+    // roster.json entry sets announcerOverlapFraction (a number 0-1 — 0.5,
+    // the settled standard, starts the song once the name clip is halfway
+    // done). Team songs and any player without a name clip never set this,
+    // so they fall through to the normal sequential path below unchanged —
+    // as would a buffer-decode failure for either clip.
     if (audioCtx && songBuffer && needsNameClip && nameClipBuffer &&
         typeof player.announcerOverlapFraction === 'number') {
       var delay = nameClipBuffer.duration * player.announcerOverlapFraction;
@@ -1576,8 +1580,9 @@
             id: p.id, number: p.number, name: p.name, file: p.file,
             nameClipFile: p.nameClipFile || null,
             guestSong: p.guestSong || null, guestDefault: !!p.guestDefault,
-            // See playOverlappingBuffers/firePlayback — undefined for every
-            // player except the 2026-09-15 announcer-overlap A/B test.
+            // See playOverlappingBuffers/firePlayback — 0.5 for every real
+            // player as of 2026-09-15, undefined (sequential) for anything
+            // without a name clip, like team songs and guests.
             announcerOverlapFraction: typeof p.announcerOverlapFraction === 'number' ? p.announcerOverlapFraction : undefined,
             source: 'bundled'
           };
