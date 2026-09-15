@@ -1,6 +1,21 @@
 # Storm — Project Status
 
-_Last updated: 2026-09-12_
+_Last updated: 2026-09-14_
+
+## Session of 2026-09-14 — Web Audio playback engine for JBL PartyBox Bluetooth lag
+
+**Two Web Audio API fixes shipped (`c7174c4`), confirmed deployed live.** Jason reported real lag between tapping Play and sound hitting the JBL PartyBox speaker over Bluetooth, worse after silence between batters (the JBL's Bluetooth link sleeps during gaps). Went through plan mode first — two locked-in decisions: the audio system wakes up silently on the very first tap anywhere (no new UI step), and every song/soundboard clip is pre-decoded up front, not just currently-assigned slots.
+
+1. **Keep-alive silent hum** — a sub-audible 20Hz `OscillatorNode` through a `GainNode` at ~-70dBFS, started once on the first tap and left running for the session. Deliberately not literal silence — some Bluetooth stacks detect true silence and sleep the link anyway; a real nonzero signal avoids that.
+2. **Pre-decoded AudioBuffers** — every bundled and phone-added song/clip decodes into an `AudioBuffer` at startup (bundled ones read straight from Cache Storage, no second fetch); playback uses `AudioBufferSourceNode.start(0)` instead of `audio.src = url; audio.play()`. The original `<audio>`/`new Audio()` code stays fully intact as a per-file fallback whenever a buffer isn't available — never mixed with the buffer path in the same play, so the worst case is "no latency improvement," never a song silently failing to play.
+
+**Real bug found while verifying:** `ensureCachedWithTimeout` in `sw.js`-adjacent startup code had a fire-and-forget `cache.put()` that could resolve before the write landed — invisible before, but the new decode step reads the cache right after and was hitting "not cached" for every file. Fixed by awaiting the write.
+
+**Real tradeoff worth watching for:** `AudioBuffer`s can't persist across page loads, so every app launch now re-decodes everything — measured ~1.5s warm-cache startup (was near-instant) on a test machine. Should be faster on the real iPhone 16 Pro Max, but ask Jason if the splash feels noticeably longer.
+
+**Verified via a temporary Playwright/puppeteer-core harness** (all bundled files decode with zero failures, hum starts once on first tap, both lineup and soundboard playback confirmed routing through `AudioBufferSourceNode`) **and the project's own `test/smoke.js`** — needed real fixes (a fixed 300ms post-reload sleep was no longer enough now that decode adds real startup time; the "audio is playing" and "natural finish" checks assumed the `<audio>` element was always used). All 13 smoke checks pass. Deploy confirmed three ways: Pages API `status:"built"`, plus a direct `curl`+`grep` of the live `js/app.js` for the new functions.
+
+**Not yet confirmed: the actual fix, on the real JBL speaker at a real game.** Everything above only proves the code runs correctly — nothing in this environment can validate the Bluetooth latency/keep-awake improvement itself.
 
 ## Session of 2026-09-08 — soundboard content (Jason, no assistant session) + a real order bug fix
 
@@ -202,7 +217,8 @@ No longer "set once, Clear between games." Now: bake in the full permanent roste
 - **Top priority: confirm whether the app now consistently opens full-height on Jason's iPhone 15 Pro Max.** Two related fixes are live (`49b26a8` static `100dvh`, `a721313` JS-driven `--vh` recomputed on resume — this second one actually matches the intermittent pattern Jason described). Unconfirmed as of 2026-08-18.
 
 ## Current state
-- Everything committed and pushed to `origin/main` through `7832386` (2026-09-12).
+- Everything committed and pushed to `origin/main` through `c7174c4` (2026-09-14).
+- **Web Audio playback engine added (2026-09-14):** a near-silent keep-alive tone starts on the first tap to stop the JBL PartyBox's Bluetooth link from sleeping between batters, and every song/soundboard clip is pre-decoded into an `AudioBuffer` at startup so Play triggers instantly via `.start(0)` instead of decode-on-tap. The original `<audio>`-based paths remain as an automatic fallback. Confirmed deployed and internally verified (zero decode failures, correct playback routing) — **not yet confirmed against the real JBL speaker at a real game**, which is the actual point of this change.
 - **Soundboard order bug fixed (2026-09-08):** bundled clips now preserve `soundboard.json`'s file order instead of always being alphabetized — that's why an earlier reorder commit didn't visibly change anything. A "Chewy" sfx (🐻 icon, Chewbacca stand-in) was added.
 - **Roster is now fully complete (2026-09-12):** all 13 players have a real name, jersey number, and 12s walk-up song — Liam Tineo #14 was the last placeholder, now filled in. 7 team songs exist, including a new one, "New Level" (2026-09-11).
 - **Soundboard panel simplified (2026-09-01):** no more title/X close button — the topbar button (now a ⚡ lightning-bolt icon) is a real toggle, solid gold while open. Stop All moved to the bottom; "+ Add Sound" removed entirely (Jason wants the bundled set left alone for now). Confirmed deployed, not yet exercised by Jason on his phone.
@@ -228,6 +244,7 @@ No longer "set once, Clear between games." Now: bake in the full permanent roste
 Jason was actively testing live on his own phone throughout the 2026-08-02 session — that's how the `.selected` CSS bug got caught and how the Stop-vs-advance behavior got settled into the ADV switch. Playback selection, the Edit button, and the Advance-on-Stop switch have real live-device exposure with real bugs already found and fixed. **Still not explicitly confirmed:** whether the ~500ms long-press threshold and blue drag-ring feel right for drag-to-reorder on a real touchscreen, whether the 112px action bar looks right in daylight/at a field, and (new, 2026-08-18) whether either viewport-height fix actually closed the intermittent bottom-gap issue on the iPhone 15 Pro Max.
 
 ## Open items / next steps
+- **Top priority (new, 2026-09-14): get Jason's read on the Web Audio playback engine at a real game** — does the JBL PartyBox lag actually improve, does the keep-alive hum stop the between-batter Bluetooth sleep, and does the ~1.5s-longer warm-cache app-open (measured on a test machine, likely faster on his actual phone) feel noticeable or bothersome.
 - **Top priority: get Jason's confirmation on the 3rd viewport-height fix attempt (2026-09-01).** If the intermittent bottom-gap bug still happens, ask exactly what he was doing right before the screenshot (switching back from another app / auto-lock then reopen / cold launch) — that would finally distinguish the resume-timing theory from something else, rather than trying a 4th blind guess.
 - Get Jason's real-device pass on the soundboard panel simplification (2026-09-01, deployed but unexercised). Thunder's volume boost was already tried and reverted the same day — don't redo it without a new approach.
 - **Get Jason's real-device confirmation on the "A Storm is Coming" volume bump (2026-09-01)** — if it's still too quiet or now sounds off, don't jump straight back to full loudnorm (already rejected once); consider a bigger flat gain or a milder loudnorm target instead.
