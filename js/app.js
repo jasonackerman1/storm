@@ -15,7 +15,7 @@
   // bucket the service worker serves from, without needing a message
   // round-trip through a service worker that may not be controlling yet
   // (e.g. the very first install, before any SW has activated).
-  var CACHE_NAME = 'storm-cache-v42';
+  var CACHE_NAME = 'storm-cache-v43';
 
   // The real, current batting order — bump DEFAULT_LINEUP_VERSION whenever
   // this changes so it gets applied once on every device (even ones with
