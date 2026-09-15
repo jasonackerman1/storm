@@ -156,11 +156,20 @@ async function waitForSplashGone(page) {
   // Simulate the currently-playing clip finishing naturally. When the buffer
   // path was used (the normal case now), that means invoking the real
   // AudioBufferSourceNode's own onended handler directly rather than firing a
-  // synthetic event on the (in that case, unused) <audio> element.
-  await page.evaluate(() => {
-    var src = window.__audioLog.lastSource;
-    if (src && src.onended) { src.onended(); }
-    else { document.getElementById('player-audio').dispatchEvent(new Event('ended')); }
+  // synthetic event on the (in that case, unused) <audio> element. l1 (Owen)
+  // now has a name-announcer clip, so a real play is a 2-clip sequence
+  // (name clip, then song) — firing onended once only finishes the FIRST
+  // clip and advances to the second, not the whole sequence. Loop until the
+  // Play button no longer reads STOP (the real, observable "play is over"
+  // signal), which drains a sequence of any length instead of assuming one.
+  await page.evaluate(async () => {
+    for (let i = 0; i < 5; i++) {
+      var src = window.__audioLog.lastSource;
+      if (src && src.onended) { src.onended(); }
+      else { document.getElementById('player-audio').dispatchEvent(new Event('ended')); }
+      await new Promise(r => setTimeout(r, 80));
+      if (document.getElementById('action-play').textContent !== 'STOP') break;
+    }
   });
   await new Promise(r => setTimeout(r, 100));
   check('auto-advance on natural finish skips empty l2 and lands on l3', await selectedSlotId(page) === 'l3');

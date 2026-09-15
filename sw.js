@@ -1,4 +1,4 @@
-var CACHE_NAME = 'storm-cache-v41';
+var CACHE_NAME = 'storm-cache-v42';
 var NETWORK_FIRST_FILES = ['./', './index.html', './css/style.css', './js/app.js', './manifest.json', './roster.json', './soundboard.json'];
 
 var SHELL_FILES = [
@@ -30,9 +30,16 @@ self.addEventListener('install', function (event) {
         var soundboard = results[1];
         var songFiles = (roster || []).filter(function (p) { return p.file; })
           .map(function (p) { return './' + p.file; });
+        // nameClipFile (per-player announcer clips) was never included here —
+        // harmless in practice since js/app.js's own startup media check
+        // independently fetches+caches every bundled file including these,
+        // but this install-time precache should cover the same set for
+        // consistency and so it's not silently relying on that other path.
+        var nameClipFiles = (roster || []).filter(function (p) { return p.nameClipFile; })
+          .map(function (p) { return './' + p.nameClipFile; });
         var sfxFiles = (soundboard || []).filter(function (c) { return c.file; })
           .map(function (c) { return './' + c.file; });
-        var allFiles = SHELL_FILES.concat(songFiles, sfxFiles);
+        var allFiles = SHELL_FILES.concat(songFiles, nameClipFiles, sfxFiles);
         return caches.open(CACHE_NAME).then(function (cache) {
           return Promise.all(
             allFiles.map(function (url) {
