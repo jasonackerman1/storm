@@ -2,6 +2,20 @@
 
 _Last updated: 2026-09-15_
 
+## Session of 2026-09-15 (cont'd) — Name-announcer clips shipped, 3 real name typos fixed, 4th viewport-height attempt
+
+**Announcer clips for all 12 players (`b0206c7`), confirmed deployed live.** Jason found his AI announcer voice ("Paul Heyman" — flagged once that this is almost certainly a real-person voice clone, his call to make) and generated a batch of "Now batting, number N, [Name]!" clips. Loudness-normalized all 12 (came in 5-8dB quieter than the roster) to the same -11 LUFS/-1.0dBTP standard, wired each in as `nameClipFile` in `roster.json` — the existing `playSequence` chaining (built 2026-08-30) needed zero code changes, this was pure content. `CACHE_NAME` bumped v41→v42.
+
+**3 real name typos found and fixed, each confirmed with Jason directly:** Manson→**Mason Frank**, Sam Va Tassel→**Sammy Van Tassel** (also resolves the long-open typo question on this name), Jonathan→**Johnathan Velez**. Walk-up song files renamed to match each. Kameren Branch's clip mispronounces his name ("Kamren") but roster's spelling was already confirmed correct before — left as-is, flagged for a re-record.
+
+**Two real bugs found and fixed along the way, not just content work:**
+1. `sw.js`'s install-time precache never included `nameClipFile`, only `file` — harmless (the app's own startup check covers it independently) but fixed for consistency.
+2. `test/smoke.js`'s natural-finish simulation fired a buffer source's `onended` exactly once, assuming that always meant "the whole play is over." Broke the moment Owen (used in the test's seed data) got a 2-clip sequence — 3 of 13 checks failed. Fixed to drain the sequence by watching the Play button's real state instead of assuming clip count.
+
+**4th attempt at the recurring viewport-height bug (`54a824a`), confirmed deployed, still NOT confirmed fixed.** Rather than guess again, asked Jason directly when it happens — **answer: almost always cold launch, rarely resume-from-background.** That's exactly the code path the last two fixes never touched (both only recompute on resume events, which never fire on a fresh launch). Added the same deferred recompute to cold launch (`init()`) and right before the splash reveals content (`hideSplash()`, since the splash can run up to 12s). Verified the recompute now fires multiple times on cold launch via a headless instrumentation check (was once before). **Only Jason's real phone can confirm this actually closes it out** — if he reports it's still happening, ask exactly when again rather than reaching for a 5th generic theory.
+
+**Open question Jason raised, not yet decided:** should the announcer play before the walk-up song (current, sequential — already built) or at the same time (overlapping — doesn't exist, would need a real second implementation and might mean lengthening songs to ~15s so the announcer doesn't talk over half of it)? He's testing the current sequential behavior himself first. No code change requested yet.
+
 ## Session of 2026-09-15 — Guest player support, 3 new sfx, Liam Pichardo removed, JBL research
 
 **Guest player support shipped (`89401a4`), confirmed deployed live.** Triggered by a real game where they had to borrow a 9th/10th hitter from the 11U team for the first time — the app had no concept of a guest.
