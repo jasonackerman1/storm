@@ -1,6 +1,28 @@
 # Storm — Project Status
 
-_Last updated: 2026-09-14_
+_Last updated: 2026-09-15_
+
+## Session of 2026-09-15 — Guest player support, 3 new sfx, Liam Pichardo removed, JBL research
+
+**Guest player support shipped (`89401a4`), confirmed deployed live.** Triggered by a real game where they had to borrow a 9th/10th hitter from the 11U team for the first time — the app had no concept of a guest.
+
+**First design was rejected and rebuilt from scratch.** Initial attempt added a "use a spare walk-up song" picker to the existing Add Player form (skip uploading a file, pick a pre-bundled spare instead). Jason called it "confusing and unnecessary" — his actual mental model was **"Guest should be a permanent roster card, like a jersey, always there to drop onto the board."** Reverted that whole approach and rebuilt around it instead.
+
+**What shipped:** "Guest" is a set of `roster.json` entries that all share the same identity — `number: "?"`, `name: "Guest"` — so the lineup tile always shows **GUEST / ?**, through the existing player-tile rendering code with zero special-casing. Behind that one identity sit multiple real songs (a `guestSong` label + optional `guestDefault` flag per entry), shown by their real name in the assign sheet/Manage Team so they're distinguishable. Drop Guest on an open slot, pencil-swap between songs later — both reuse the existing assign-sheet flow untouched. 4 songs as of this session: Up, Big Stepper, John Cena's Theme (default), Suave.
+
+**3 new soundboard clips:** Evil Laugh 😈, Fatality 💀, Undertaker's Bell 🔔 — short one-shots, peak-normalized (not loudnorm'd) per the established rule for percussive transients.
+
+**Liam Pichardo left the team.** Removed from `roster.json` and `DEFAULT_SLOTS` (comment explains why, matching the Branch/`l5` pattern). His existing walk-up song was already a clean 12.00s loudnorm'd cut, so it was reused directly as guest song #4 ("Suave") via a plain `git mv` — no reprocessing.
+
+**Real bug found and fixed:** deleting a bundled roster entry that's still assigned to a slot left a "ghost" reference — the tile correctly showed empty, but tapping it just selected the broken slot instead of opening the assign sheet (Play would've silently done nothing). First time this scenario has ever actually happened. Fixed: `selectSlot()` now checks the id actually resolves to a real player, and a new `pruneStaleSlots()` cleans stale slot references out of persisted state on load. Verified against a simulated copy of Jason's real device state (already-migrated, `l13` still holding the deleted `'p2'`).
+
+**`CACHE_NAME` bumped twice** (v39→v40→v41) for the new bundled media.
+
+**JBL PartyBox 300 research — no code changes.** Confirmed the speaker's physical Bass Boost knob should stay off/low (JBL's own guidance: stacking it on already-bass-heavy source material triggers the speaker's internal noise suppression and distorts) — everything else about the existing loudnorm treatment is fine as-is, speaker-agnostic. Clarified for Jason: the ~200-300ms baseline Bluetooth codec latency is permanent, inherent to any Bluetooth speaker, and was never what the Web Audio engine was fixing — that engine targets the much worse *sleeping-link* lag between batters. Jason correctly reasoned the baseline delay would've been just as present on any prior speaker too, and is small enough to be a non-issue.
+
+**Announcer/name-clip content — Jason sourcing, no code needed.** Wants "Now batting, #7, Owen Ackerman" style hype announcements, possibly WWE-style with nicknames. The mechanism (`nameClipFile` per player, chained before the walk-up song via `playSequence`) already exists and needs nothing new — zero players have one yet. Pointed him at ElevenLabs' Sports Announcer voice library, FineVoice/Typecast, and Fiverr as real sourcing options (explicitly steered away from literally cloning a real announcer's voice).
+
+**Still open:** the JBL latency fix and the guest-player flow both still need a real-game confirmation; Jason hasn't confirmed John Cena's Theme as an acceptable default guest song; announcer clips are pending on his end.
 
 ## Session of 2026-09-14 — Web Audio playback engine for JBL PartyBox Bluetooth lag
 
