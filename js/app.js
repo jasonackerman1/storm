@@ -56,6 +56,23 @@
   var nameClipObjectUrlCache = new Map();
   var activeSequenceOnComplete = null;
 
+  // ---------- Web Audio (low-latency playback + Bluetooth keep-alive) ----------
+  // audioCtx is created once at startup (construction needs no user gesture —
+  // only resume()/audible output does) so decoding can begin immediately
+  // during the startup splash, well before the user's first tap. The keep-
+  // alive hum and audioCtx.resume() itself are gated on the first real tap
+  // (see unlockAudioOnFirstGesture) to satisfy iOS's autoplay-gesture rule.
+  // Every playback path below falls back to the existing <audio>/new Audio()
+  // approach whenever a decoded buffer isn't available (still decoding,
+  // failed to decode, or Web Audio unsupported) — this must never turn a
+  // working-but-laggy song into a silently broken one at the field.
+  var audioCtx = null;
+  var keepAliveOscillator = null;
+  var songBufferCache = new Map();
+  var nameClipBufferCache = new Map();
+  var soundboardBufferCache = new Map();
+  var activeBufferSource = null;
+
   // ---------- Soundboard state ----------
   // Mirrors the bundled/local split already used for players: bundled clips
   // ship in soundboard.json + sfx/ (committed, same for every device, shown
@@ -66,7 +83,8 @@
   var localSoundboardClips = [];
   var soundboardClips = []; // { id, label, source }
   var soundboardObjectUrlCache = new Map();
-  var activeSoundboardSounds = new Map(); // clipId -> playing Audio element
+  // clipId -> { kind: 'buffer', source: AudioBufferSourceNode } | { kind: 'audio', audio: Audio }
+  var activeSoundboardSounds = new Map();
   var soundboardEditingId = null;
   // A clip whose duration is at or under this is treated as a one-shot
   // stinger (retap restarts it); anything longer is treated as a loop-style
@@ -264,6 +282,13 @@
     // callback FIRST — otherwise pausing/rewinding here can still let a
     // queued step or the completion callback fire after a manual stop.
     audio.onended = null;
+    if (activeBufferSource) {
+      // Null onended before stop() — stop() fires 'ended' too, and a manual
+      // stop must never trigger the chain-continuation/completion callback.
+      activeBufferSource.onended = null;
+      try { activeBufferSource.stop(); } catch (e) {}
+      activeBufferSource = null;
+    }
     activeSequenceOnComplete = null;
     audio.pause();
     audio.currentTime = 0;
@@ -298,6 +323,33 @@
     playNext();
   }
 
+  // Buffer-based equivalent of playSequence — used only when every clip in
+  // the sequence has a pre-decoded AudioBuffer available, so playback is
+  // source.start(0) on already-decoded audio with zero decode-on-tap delay.
+  // AudioBufferSourceNodes are one-shot (the spec disallows restarting one
+  // after stop/ended), so a fresh node is created for every clip in the queue.
+  function playSequenceBuffers(buffers, onComplete) {
+    var queue = (buffers || []).filter(Boolean).slice();
+    activeSequenceOnComplete = onComplete || null;
+
+    function playNext() {
+      if (queue.length === 0) {
+        activeBufferSource = null;
+        var cb = activeSequenceOnComplete;
+        activeSequenceOnComplete = null;
+        if (cb) cb();
+        return;
+      }
+      var source = audioCtx.createBufferSource();
+      source.buffer = queue.shift();
+      source.connect(audioCtx.destination);
+      source.onended = playNext;
+      activeBufferSource = source;
+      source.start(0);
+    }
+    playNext();
+  }
+
   function songSrcFor(player) {
     if (!player) return null;
     return player.source === 'bundled' ? player.file : objectUrlCache.get(player.id);
@@ -309,6 +361,16 @@
     return player.hasNameClip ? nameClipObjectUrlCache.get(player.id) : null;
   }
 
+  function songBufferFor(player) {
+    if (!player) return null;
+    return songBufferCache.get(player.id) || null;
+  }
+
+  function nameClipBufferFor(player) {
+    if (!player) return null;
+    return nameClipBufferCache.get(player.id) || null;
+  }
+
   function firePlayback(slotId) {
     var playerId = slots[slotId];
     var player = library.filter(function (p) { return p.id === playerId; })[0];
@@ -316,9 +378,8 @@
     var songSrc = songSrcFor(player);
     if (!songSrc) return;
     currentPlayingSlot = slotId;
-    // Graceful fallback is automatic: playSequence() drops the null name
-    // clip entry when a player has none, and just plays the song.
-    playSequence([nameClipSrcFor(player), songSrc], function () {
+
+    function onFinished() {
       var finishedSlot = slotId;
       currentPlayingSlot = null;
       // Only auto-advance if the user hasn't already tapped ahead to a
@@ -326,7 +387,22 @@
       if (selectedSlot === finishedSlot) advanceToNextLineupSlot(finishedSlot);
       renderGrid();
       updateActionBar();
-    });
+    }
+
+    // Use the pre-decoded buffer path only when the WHOLE sequence for this
+    // play can run on buffers — never mix a decoded buffer with a URL-based
+    // clip in the same play, which would need a much harder mixed-node/
+    // mixed-element state machine to sequence correctly.
+    var needsNameClip = !!nameClipSrcFor(player);
+    var songBuffer = songBufferFor(player);
+    var nameClipBuffer = nameClipBufferFor(player);
+    if (audioCtx && songBuffer && (!needsNameClip || nameClipBuffer)) {
+      playSequenceBuffers([nameClipBuffer, songBuffer], onFinished);
+    } else {
+      // Graceful fallback is automatic: playSequence() drops the null name
+      // clip entry when a player has none, and just plays the song.
+      playSequence([nameClipSrcFor(player), songSrc], onFinished);
+    }
   }
 
   function toggleActionPlay() {
@@ -634,6 +710,8 @@
       if (url) { URL.revokeObjectURL(url); objectUrlCache.delete(p.id); }
       var nameUrl = nameClipObjectUrlCache.get(p.id);
       if (nameUrl) { URL.revokeObjectURL(nameUrl); nameClipObjectUrlCache.delete(p.id); }
+      songBufferCache.delete(p.id);
+      nameClipBufferCache.delete(p.id);
       localPlayers = localPlayers.filter(function (x) { return x.id !== p.id; });
       Object.keys(slots).forEach(function (slotId) {
         if (slots[slotId] === p.id) slots[slotId] = null;
@@ -718,41 +796,77 @@
   }
 
   function stopSoundboardClip(clipId) {
-    var audio = activeSoundboardSounds.get(clipId);
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-      activeSoundboardSounds.delete(clipId);
+    var entry = activeSoundboardSounds.get(clipId);
+    if (!entry) return;
+    if (entry.kind === 'buffer') {
+      entry.source.onended = null;
+      try { entry.source.stop(); } catch (e) {}
+    } else {
+      entry.audio.pause();
+      entry.audio.currentTime = 0;
     }
+    activeSoundboardSounds.delete(clipId);
+  }
+
+  // Starts (or restarts) a soundboard clip via a fresh AudioBufferSourceNode.
+  // Buffer sources are one-shot/can't seek, so "restart" always means a
+  // brand new node rather than rewinding an existing one.
+  function startSoundboardBufferClip(clipId, buffer) {
+    var source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioCtx.destination);
+    source.onended = function () {
+      activeSoundboardSounds.delete(clipId);
+      renderSoundboardGrid();
+    };
+    activeSoundboardSounds.set(clipId, { kind: 'buffer', source: source });
+    source.start(0);
   }
 
   // Tap a tile: if nothing's playing, start it, layering on top of anything
-  // else already playing (each clip gets its own Audio instance — the shared
+  // else already playing (each clip plays independently — the shared
   // player-audio element is reserved for lineup playback). Tap it again while
   // playing: a short one-shot stinger restarts from the top, a longer
-  // loop-style sound stops.
+  // loop-style sound stops. Uses a pre-decoded AudioBuffer when available,
+  // falling back to a plain Audio element (the only way to play a clip that
+  // hasn't been decoded yet) otherwise.
   function toggleSoundboardClip(clipId) {
     var existing = activeSoundboardSounds.get(clipId);
     if (existing) {
-      if (existing.duration && existing.duration <= SOUND_STINGER_MAX_SECONDS) {
-        existing.currentTime = 0;
-        existing.play().catch(function () {});
+      var duration = existing.kind === 'buffer' ? existing.source.buffer.duration : existing.audio.duration;
+      if (duration && duration <= SOUND_STINGER_MAX_SECONDS) {
+        if (existing.kind === 'buffer') {
+          var buffer = existing.source.buffer;
+          existing.source.onended = null;
+          try { existing.source.stop(); } catch (e) {}
+          activeSoundboardSounds.delete(clipId);
+          startSoundboardBufferClip(clipId, buffer);
+        } else {
+          existing.audio.currentTime = 0;
+          existing.audio.play().catch(function () {});
+        }
       } else {
         stopSoundboardClip(clipId);
       }
     } else {
       var clip = soundboardClips.filter(function (c) { return c.id === clipId; })[0];
-      var src = soundboardSrcFor(clip);
-      if (!src) return;
-      var audio = new Audio(src);
-      var clear = function () {
-        activeSoundboardSounds.delete(clipId);
-        renderSoundboardGrid();
-      };
-      audio.addEventListener('ended', clear);
-      audio.addEventListener('error', clear);
-      audio.play().catch(function () {});
-      activeSoundboardSounds.set(clipId, audio);
+      if (!clip) return;
+      var decodedBuffer = soundboardBufferCache.get(clip.id);
+      if (audioCtx && decodedBuffer) {
+        startSoundboardBufferClip(clipId, decodedBuffer);
+      } else {
+        var src = soundboardSrcFor(clip);
+        if (!src) return;
+        var audio = new Audio(src);
+        var clear = function () {
+          activeSoundboardSounds.delete(clipId);
+          renderSoundboardGrid();
+        };
+        audio.addEventListener('ended', clear);
+        audio.addEventListener('error', clear);
+        audio.play().catch(function () {});
+        activeSoundboardSounds.set(clipId, { kind: 'audio', audio: audio });
+      }
     }
     renderSoundboardGrid();
   }
@@ -836,6 +950,7 @@
         if (oldUrl) URL.revokeObjectURL(oldUrl);
         return idbPut(SOUND_STORE, { id: clip.id, label: label, blob: file }).then(function () {
           soundboardObjectUrlCache.set(clip.id, URL.createObjectURL(file));
+          decodeOneInto(soundboardBufferCache, clip.id, file.arrayBuffer());
           rebuildSoundboardLibrary();
         });
       }
@@ -850,6 +965,7 @@
     var id = 'sound-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
     return idbPut(SOUND_STORE, { id: id, label: label, blob: file }).then(function () {
       soundboardObjectUrlCache.set(id, URL.createObjectURL(file));
+      decodeOneInto(soundboardBufferCache, id, file.arrayBuffer());
       localSoundboardClips.push({ id: id, label: label, source: 'local' });
       rebuildSoundboardLibrary();
     });
@@ -863,6 +979,7 @@
     idbDelete(SOUND_STORE, clip.id).then(function () {
       var url = soundboardObjectUrlCache.get(clip.id);
       if (url) { URL.revokeObjectURL(url); soundboardObjectUrlCache.delete(clip.id); }
+      soundboardBufferCache.delete(clip.id);
       localSoundboardClips = localSoundboardClips.filter(function (c) { return c.id !== clip.id; });
       rebuildSoundboardLibrary();
       renderSoundboardGrid();
@@ -876,7 +993,15 @@
       this.classList.toggle('active', isOpen);
     });
     document.getElementById('soundboard-stop-all').addEventListener('click', function () {
-      activeSoundboardSounds.forEach(function (audio) { audio.pause(); audio.currentTime = 0; });
+      activeSoundboardSounds.forEach(function (entry) {
+        if (entry.kind === 'buffer') {
+          entry.source.onended = null;
+          try { entry.source.stop(); } catch (e) {}
+        } else {
+          entry.audio.pause();
+          entry.audio.currentTime = 0;
+        }
+      });
       activeSoundboardSounds.clear();
       renderSoundboardGrid();
     });
@@ -951,10 +1076,12 @@
       idbPut(STORE, record).then(function () {
         var url = URL.createObjectURL(file);
         objectUrlCache.set(id, url);
+        decodeOneInto(songBufferCache, id, file.arrayBuffer());
         var hasNameClip = false;
         if (nameClipFile) {
           var nameUrl = URL.createObjectURL(nameClipFile);
           nameClipObjectUrlCache.set(id, nameUrl);
+          decodeOneInto(nameClipBufferCache, id, nameClipFile.arrayBuffer());
           hasNameClip = true;
         }
         localPlayers.push({ id: id, number: number, name: name, source: 'local', hasNameClip: hasNameClip });
@@ -1075,6 +1202,86 @@
     });
   }
 
+  // ---------- Web Audio setup ----------
+  // Constructing an AudioContext needs no user gesture — only resuming it to
+  // an audible 'running' state does — so this happens unconditionally at
+  // startup (see init()) well before any tap, letting the decode pipeline
+  // below start immediately during the splash sequence. Target hardware is a
+  // fixed, known device (iPhone 16 Pro Max Safari) that has always supported
+  // this, so there's no fallback/polyfill for a missing AudioContext beyond
+  // degrading to the existing <audio>/new Audio() paths everywhere below.
+  function initAudioContext() {
+    var AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtxClass) return;
+    try {
+      audioCtx = new AudioCtxClass({ latencyHint: 'interactive' });
+    } catch (e) {
+      audioCtx = null;
+    }
+  }
+
+  // A literal digital-silence signal isn't good enough to keep a Bluetooth
+  // speaker's link awake — some stacks specifically detect true silence and
+  // let the link sleep regardless of a Web Audio node technically running.
+  // A very quiet (~-70dBFS), sub-audible 20Hz tone is a real nonzero AC
+  // signal that keeps the link active without being audible, and (unlike a
+  // synthesized noise buffer) needs no manual sample-filling/loop-seam work.
+  // Started exactly once, on the first real user tap, and left running for
+  // the life of the tab — see unlockAudioOnFirstGesture.
+  function startKeepAliveHum() {
+    if (!audioCtx || keepAliveOscillator) return;
+    var oscillator = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = 20;
+    gain.gain.value = 0.0003;
+    oscillator.connect(gain);
+    gain.connect(audioCtx.destination);
+    oscillator.start();
+    keepAliveOscillator = oscillator;
+  }
+
+  // iOS gates an AudioContext's audible 'running' state behind a real user
+  // gesture regardless of when it was constructed — this is that gesture.
+  // Fires exactly once, on the very first tap anywhere in the app (which,
+  // thanks to this app's select-then-confirm playback model, always happens
+  // well before Play is even tappable — see selectSlot). No dedicated
+  // "Enable Audio" screen needed.
+  function unlockAudioOnFirstGesture() {
+    if (!audioCtx) return;
+    audioCtx.resume().catch(function () {});
+    startKeepAliveHum();
+  }
+
+  // The OS can suspend an AudioContext when the app is backgrounded, the
+  // same way it releases the screen wake lock — re-resume on every return to
+  // the foreground, not just once at startup. Node graphs (including the
+  // keep-alive hum) survive a suspend/resume cycle, so only the context
+  // itself needs re-arming here, never the hum's oscillator/gain nodes.
+  function resumeAudioIfNeeded() {
+    if (!audioCtx || audioCtx.state === 'running') return;
+    audioCtx.resume().catch(function () {});
+  }
+
+  // Decodes an ArrayBuffer-yielding promise into the given buffer cache under
+  // id. Never rejects outward — a decode failure just leaves that id absent
+  // from the cache, so play-time code automatically falls back to the
+  // existing URL-based <audio>/new Audio() path for that one file. Used both
+  // for mid-session additions (phone-added songs/clips) and by the bundled-
+  // media decode pass at startup.
+  function decodeOneInto(cacheMap, id, arrayBufferPromise) {
+    if (!audioCtx) return Promise.resolve();
+    return arrayBufferPromise
+      .then(function (arrayBuffer) { return audioCtx.decodeAudioData(arrayBuffer); })
+      .catch(function (err) {
+        console.warn('Storm: decode failed for', id, err);
+        return null;
+      })
+      .then(function (buffer) {
+        if (buffer) cacheMap.set(id, buffer);
+      });
+  }
+
   // ---------- Keep screen awake ----------
   // Without this, iOS locks the screen after ~30s of no touches — easy to
   // hit between at-bats — and the next tap has to unlock the phone first.
@@ -1096,6 +1303,7 @@
       // as the reliable signal to recompute the viewport height fix above.
       if (document.visibilityState === 'visible') {
         requestWakeLock();
+        resumeAudioIfNeeded();
         setViewportHeightVar();
         scheduleViewportHeightRecalc();
       }
@@ -1143,45 +1351,75 @@
           resolve();
         }, 6000);
         fetch(url, { cache: 'no-store', signal: controller ? controller.signal : undefined })
-          .then(function (res) { if (!settled && res && res.ok) cache.put(url, res); })
+          .then(function (res) {
+            // Must return (not fire-and-forget) cache.put's promise — callers
+            // that read the cache immediately after this resolves (e.g. the
+            // decode pipeline) need the write to have actually landed, not
+            // just been kicked off.
+            if (!settled && res && res.ok) return cache.put(url, res);
+          })
           .catch(function () {})
           .then(function () { if (!settled) { clearTimeout(timer); resolve(); } });
       });
     });
   }
 
+  // Reads a bundled file's bytes straight from the cache runStartupMediaCheck
+  // just confirmed present (no second network fetch) and decodes them into
+  // the given buffer cache via decodeOneInto, which already isolates
+  // per-file failures.
+  function decodeBundledEntry(entry, cache) {
+    return cache.match(entry.url).then(function (res) {
+      return res ? res.arrayBuffer() : Promise.reject(new Error('not cached'));
+    }).then(function (arrayBuffer) {
+      return decodeOneInto(entry.cache, entry.id, Promise.resolve(arrayBuffer));
+    }).catch(function () {
+      // cache.match found nothing — shouldn't happen once ensureCachedWithTimeout
+      // resolved, but stay defensive; that id just stays undecoded (URL fallback).
+    });
+  }
+
   function runStartupMediaCheck() {
     var startedAt = Date.now();
-    var songFiles = bundledPlayers.filter(function (p) { return p.file; }).map(function (p) { return './' + p.file; });
-    var sfxFiles = bundledSoundboardClips.filter(function (c) { return c.file; }).map(function (c) { return './' + c.file; });
-    var files = songFiles.concat(sfxFiles);
+    var songEntries = bundledPlayers.filter(function (p) { return p.file; })
+      .map(function (p) { return { id: p.id, url: './' + p.file, cache: songBufferCache }; });
+    var nameClipEntries = bundledPlayers.filter(function (p) { return p.nameClipFile; })
+      .map(function (p) { return { id: p.id, url: './' + p.nameClipFile, cache: nameClipBufferCache }; });
+    var sfxEntries = bundledSoundboardClips.filter(function (c) { return c.file; })
+      .map(function (c) { return { id: c.id, url: './' + c.file, cache: soundboardBufferCache }; });
+    var entries = songEntries.concat(nameClipEntries, sfxEntries);
 
     function reveal() {
       var elapsed = Date.now() - startedAt;
       setTimeout(hideSplash, Math.max(0, SPLASH_MIN_MS - elapsed));
     }
 
-    if (files.length === 0 || !('caches' in window)) {
+    if (entries.length === 0 || !('caches' in window)) {
       setSplashProgress(100);
       reveal();
       return;
     }
 
     var done = 0;
-    var total = files.length;
+    var total = entries.length;
 
     var checkAll = caches.open(CACHE_NAME).then(function (cache) {
-      return Promise.all(files.map(function (url) {
-        return ensureCachedWithTimeout(url, cache).then(function () {
+      return Promise.all(entries.map(function (entry) {
+        return ensureCachedWithTimeout(entry.url, cache).then(function () {
+          return decodeBundledEntry(entry, cache);
+        }).then(function () {
           done++;
           setSplashProgress(Math.round((done / total) * 100));
         });
       }));
     }).catch(function () {});
 
-    // Whichever finishes first — every file confirmed, or this hard ceiling
-    // — reveals the app. Guarantees a bad connection (or a captive portal
-    // that never actually errors) can't leave the splash up indefinitely.
+    // Whichever finishes first — every file confirmed and decoded, or this
+    // hard ceiling — reveals the app. Guarantees a bad connection (or a
+    // captive portal that never actually errors) can't leave the splash up
+    // indefinitely. Anything still mid-decode or that failed to decode when
+    // this fires just plays via its existing URL-based fallback until (or
+    // unless) decoding quietly finishes in the background.
     var hardCeiling = new Promise(function (resolve) { setTimeout(resolve, SPLASH_MAX_MS); });
 
     Promise.race([checkAll, hardCeiling]).then(function () {
@@ -1192,6 +1430,11 @@
 
   // ---------- Init ----------
   function init() {
+    initAudioContext();
+    // Capture phase + once: fires on the very first tap anywhere, before any
+    // in-app handler could stop propagation — reliably ahead of any slot tap.
+    document.addEventListener('pointerdown', unlockAudioOnFirstGesture, { capture: true, once: true });
+
     setViewportHeightVar();
     window.addEventListener('resize', setViewportHeightVar);
     window.addEventListener('orientationchange', setViewportHeightVar);
@@ -1222,9 +1465,11 @@
         localPlayers = records.map(function (r) {
           var url = URL.createObjectURL(r.blob);
           objectUrlCache.set(r.id, url);
+          decodeOneInto(songBufferCache, r.id, r.blob.arrayBuffer());
           var hasNameClip = false;
           if (r.nameClipBlob) {
             nameClipObjectUrlCache.set(r.id, URL.createObjectURL(r.nameClipBlob));
+            decodeOneInto(nameClipBufferCache, r.id, r.nameClipBlob.arrayBuffer());
             hasNameClip = true;
           }
           return { id: r.id, number: r.number, name: r.name, source: 'local', hasNameClip: hasNameClip };
@@ -1243,6 +1488,7 @@
       .then(function (records) {
         localSoundboardClips = (records || []).map(function (r) {
           soundboardObjectUrlCache.set(r.id, URL.createObjectURL(r.blob));
+          decodeOneInto(soundboardBufferCache, r.id, r.blob.arrayBuffer());
           return { id: r.id, label: r.label, source: 'local' };
         });
       })

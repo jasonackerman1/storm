@@ -64,7 +64,16 @@ async function freshLoad(page) {
       for (const r of regs) await r.unregister();
     }
   });
-  await new Promise(r => setTimeout(r, 300));
+  await waitForSplashGone(page);
+}
+
+// The startup splash now also blocks on decoding every bundled file into an
+// AudioBuffer (not just confirming it's cache-stored), so it can take a real
+// couple of seconds even on a warm cache — a fixed short sleep after
+// load/reload is no longer reliably enough for the app to be interactive.
+async function waitForSplashGone(page) {
+  await page.waitForFunction(() => !document.getElementById('splash-screen'), { timeout: 20000 }).catch(() => {});
+  await new Promise(r => setTimeout(r, 100));
 }
 
 (async () => {
@@ -76,8 +85,37 @@ async function freshLoad(page) {
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(e.message));
 
+  // Lineup playback now runs through a decoded AudioBuffer + AudioBufferSourceNode
+  // whenever a file decoded successfully (the normal case), not the <audio
+  // id="player-audio"> element — so "is it actually playing" needs to observe
+  // both paths. Wrapping AudioContext before app.js loads (rather than reaching
+  // into the IIFE's internals) keeps this a black-box, DOM/observable-behavior
+  // test like the rest of the file.
+  await page.evaluateOnNewDocument(() => {
+    window.__audioLog = { bufferSourceStarts: 0 };
+    const OrigCtx = window.AudioContext || window.webkitAudioContext;
+    function WrappedCtx(opts) {
+      const ctx = new OrigCtx(opts);
+      const origCreateBS = ctx.createBufferSource.bind(ctx);
+      ctx.createBufferSource = function () {
+        const src = origCreateBS();
+        const origStart = src.start.bind(src);
+        src.start = function (...a) {
+          window.__audioLog.bufferSourceStarts++;
+          window.__audioLog.lastSource = src;
+          return origStart(...a);
+        };
+        return src;
+      };
+      return ctx;
+    }
+    window.AudioContext = WrappedCtx;
+    window.webkitAudioContext = WrappedCtx;
+  });
+
   // --- Seed a known lineup, load fresh ---
   await page.goto(BASE_URL + '/index.html?cb=' + Date.now(), { waitUntil: 'networkidle0' });
+  await waitForSplashGone(page);
   await seedSlots(page);
   await page.reload({ waitUntil: 'networkidle0' });
   await page.evaluate(async () => {
@@ -86,7 +124,7 @@ async function freshLoad(page) {
       for (const r of regs) await r.unregister();
     }
   });
-  await new Promise(r => setTimeout(r, 300));
+  await waitForSplashGone(page);
 
   // --- Select-then-confirm playback ---
   await clickSlot(page, 'l1');
@@ -98,12 +136,14 @@ async function freshLoad(page) {
   await new Promise(r => setTimeout(r, 100));
   const playingClass = await page.$eval('.slot-btn[data-slot-id="l1"]', el => el.className);
   check('tile shows playing state after Play', playingClass.indexOf('playing') !== -1);
-  const audioPlaying = await page.evaluate(() => !document.getElementById('player-audio').paused);
-  check('audio element is actually playing', audioPlaying);
+  const audioPlaying = await page.evaluate(() =>
+    !document.getElementById('player-audio').paused || window.__audioLog.bufferSourceStarts > 0);
+  check('audio is actually playing (buffer or <audio> fallback path)', audioPlaying);
 
   // Mis-tap safety: selecting a different slot must not touch the playing audio
   await clickSlot(page, 'l3');
-  const stillPlaying = await page.evaluate(() => !document.getElementById('player-audio').paused);
+  const stillPlaying = await page.evaluate(() =>
+    !document.getElementById('player-audio').paused || window.__audioLog.bufferSourceStarts > 0);
   check('selecting a different slot does not interrupt playback', stillPlaying);
   check('selection moved to the newly tapped slot', await selectedSlotId(page) === 'l3');
 
@@ -113,7 +153,15 @@ async function freshLoad(page) {
   // already playing, so a Play click here would hit the manual-stop branch
   // instead of exercising natural completion in isolation.
   await clickSlot(page, 'l1');
-  await page.evaluate(() => document.getElementById('player-audio').dispatchEvent(new Event('ended')));
+  // Simulate the currently-playing clip finishing naturally. When the buffer
+  // path was used (the normal case now), that means invoking the real
+  // AudioBufferSourceNode's own onended handler directly rather than firing a
+  // synthetic event on the (in that case, unused) <audio> element.
+  await page.evaluate(() => {
+    var src = window.__audioLog.lastSource;
+    if (src && src.onended) { src.onended(); }
+    else { document.getElementById('player-audio').dispatchEvent(new Event('ended')); }
+  });
   await new Promise(r => setTimeout(r, 100));
   check('auto-advance on natural finish skips empty l2 and lands on l3', await selectedSlotId(page) === 'l3');
   const playBtnAfterEnded = await page.$eval('#action-play', b => b.textContent);
@@ -153,7 +201,7 @@ async function freshLoad(page) {
     }));
   });
   await page.reload({ waitUntil: 'networkidle0' });
-  await new Promise(r => setTimeout(r, 300));
+  await waitForSplashGone(page);
 
   const l1Box = (await (await page.$('.slot-btn[data-slot-id="l1"]')).boundingBox());
   const l3Box = (await (await page.$('.slot-btn[data-slot-id="l3"]')).boundingBox());
