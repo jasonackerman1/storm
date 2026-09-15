@@ -15,7 +15,7 @@
   // bucket the service worker serves from, without needing a message
   // round-trip through a service worker that may not be controlling yet
   // (e.g. the very first install, before any SW has activated).
-  var CACHE_NAME = 'storm-cache-v41';
+  var CACHE_NAME = 'storm-cache-v42';
 
   // The real, current batting order — bump DEFAULT_LINEUP_VERSION whenever
   // this changes so it gets applied once on every device (even ones with
@@ -1362,6 +1362,14 @@
   }
 
   function hideSplash() {
+    // Second safety net for the cold-launch viewport-height glitch (see the
+    // note in init()): the splash can run anywhere from ~500ms to 12s, so a
+    // single deferred recompute right after DOMContentLoaded might still be
+    // too early if iOS takes longer than that to settle its real layout.
+    // Recomputing again right as the real content is about to become
+    // visible catches that case regardless of how long the splash ran.
+    setViewportHeightVar();
+    scheduleViewportHeightRecalc();
     var splash = document.getElementById('splash-screen');
     if (!splash) return;
     splash.classList.add('splash-done');
@@ -1467,7 +1475,17 @@
     // in-app handler could stop propagation — reliably ahead of any slot tap.
     document.addEventListener('pointerdown', unlockAudioOnFirstGesture, { capture: true, once: true });
 
+    // The previous two viewport-height fixes only deferred-recompute on
+    // RESUME events (pageshow/visibilitychange) — but Jason confirmed the
+    // wrong-height glitch almost always happens on a genuine COLD LAUNCH,
+    // rarely on resume. A cold launch never fires any of those events, so
+    // this path never got the "wait a couple of frames for real layout to
+    // settle" treatment at all — it read innerHeight exactly once,
+    // synchronously, before iOS may have finished its initial layout pass,
+    // and nothing ever corrected it afterward unless the user happened to
+    // resize/rotate/resume. Applying the same deferred recompute here too.
     setViewportHeightVar();
+    scheduleViewportHeightRecalc();
     window.addEventListener('resize', setViewportHeightVar);
     window.addEventListener('orientationchange', setViewportHeightVar);
     window.addEventListener('pageshow', function () {
