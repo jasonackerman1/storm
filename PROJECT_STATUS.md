@@ -2,6 +2,10 @@
 
 _Last updated: 2026-09-15_
 
+## Session of 2026-09-15 (cont'd, 3rd round) — Thunder sfx boosted gently, confirmed sticks this time
+
+**Thunder boosted a little (`d715ea6`), confirmed deployed live AND confirmed by Jason to sound good.** Rather than repeat the +8dB flat-gain treatment rejected earlier the same day (2026-09-01) as "sounds bad," reasoned about why: Thunder's peaks were already near the ceiling (-1.4dB max), so that much gain needed harsh limiting to avoid clipping. Used a much smaller +3dB gain + light limiter instead — same technique already proven for "A Storm is Coming." Landed at -21.9dB mean (was -24.7dB), -0.4dB max, no clipping. **This is the first time a Thunder volume change has actually stuck** — the prior attempt got reverted same day. Also gave Jason a full loudness breakdown of every soundboard clip when he asked, clarifying that the quietest-reading ones (crack of the bat, Impressive, Outstanding, evil laugh, fatality, thunder) are peak-normalized one-shots and not directly comparable to the sustained-sound cluster (-13 to -17dB) — Thunder still sits ~5-9dB below that cluster by design, the boost shifted its level, it didn't close that gap.
+
 ## Session of 2026-09-15 (cont'd) — Name-announcer clips shipped, 3 real name typos fixed, 4th viewport-height attempt
 
 **Announcer clips for all 12 players (`b0206c7`), confirmed deployed live.** Jason found his AI announcer voice ("Paul Heyman" — flagged once that this is almost certainly a real-person voice clone, his call to make) and generated a batch of "Now batting, number N, [Name]!" clips. Loudness-normalized all 12 (came in 5-8dB quieter than the roster) to the same -11 LUFS/-1.0dBTP standard, wired each in as `nameClipFile` in `roster.json` — the existing `playSequence` chaining (built 2026-08-30) needed zero code changes, this was pure content. `CACHE_NAME` bumped v41→v42.
