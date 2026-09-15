@@ -2,6 +2,16 @@
 
 _Last updated: 2026-09-15_
 
+## ⚠️ OPEN INVESTIGATION (2026-09-15 evening) — silent switch may mute playback, no fix built yet
+
+Jason reported total silence on his phone (soundboard + lineup). Ruled out any code regression — the only commit since the last confirmed-working state (the Thunder boost) is a docs-only `PROJECT_STATUS.md` change, and the exact same live build plays fine in a desktop browser. **Real cause found: his phone's physical silent/ring switch.** On ring, sound works; on silent, nothing plays — and this is new behavior since the Web Audio playback engine shipped (2026-09-14, `c7174c4`).
+
+**Likely mechanism (plausible, not device-confirmed):** before Web Audio, every sound played through a real `<audio>` element via `.play()`, which on iOS typically claims a "playback" audio session category that ignores the silent switch. Since Web Audio's buffer-decode path now succeeds for virtually everyone, the `<audio id="player-audio">` element is never actually played anymore — audio goes straight through `AudioBufferSourceNode` instead, which may not reliably claim that same ignore-switch category.
+
+**Not yet answered — testing has all been on the phone's own speaker (Bluetooth was off to isolate the variable). The silent switch typically only mutes the phone's built-in speaker; Bluetooth-routed audio commonly ignores it regardless.** Jason's next step: test with the phone on silent AND connected to the real JBL over Bluetooth. If that works, this may be a non-issue for real games. If it still fails, his fallback is airplane mode with Bluetooth manually re-enabled (blocks notifications, keeps the speaker connection) — no code needed either way.
+
+**No fix has been built.** Deliberately waiting on Jason's Bluetooth test before deciding whether one's even needed. If it turns out to matter, the known workaround is having the app briefly engage a real `<audio>` element on the first user gesture (alongside the existing keep-alive-hum unlock) to claim the right iOS session category before Web Audio starts relying on it.
+
 ## Session of 2026-09-15 (cont'd, 3rd round) — Thunder sfx boosted gently, confirmed sticks this time
 
 **Thunder boosted a little (`d715ea6`), confirmed deployed live AND confirmed by Jason to sound good.** Rather than repeat the +8dB flat-gain treatment rejected earlier the same day (2026-09-01) as "sounds bad," reasoned about why: Thunder's peaks were already near the ceiling (-1.4dB max), so that much gain needed harsh limiting to avoid clipping. Used a much smaller +3dB gain + light limiter instead — same technique already proven for "A Storm is Coming." Landed at -21.9dB mean (was -24.7dB), -0.4dB max, no clipping. **This is the first time a Thunder volume change has actually stuck** — the prior attempt got reverted same day. Also gave Jason a full loudness breakdown of every soundboard clip when he asked, clarifying that the quietest-reading ones (crack of the bat, Impressive, Outstanding, evil laugh, fatality, thunder) are peak-normalized one-shots and not directly comparable to the sustained-sound cluster (-13 to -17dB) — Thunder still sits ~5-9dB below that cluster by design, the boost shifted its level, it didn't close that gap.
