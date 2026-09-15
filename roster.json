@@ -7,7 +7,6 @@
   { "id": "p11", "number": "11", "name": "Kameren Branch", "file": "mp3/11-kameren-branch.mp3" },
   { "id": "p68", "number": "68", "name": "Caleb Gingras", "file": "mp3/68-caleb-gingras.mp3" },
   { "id": "p29", "number": "29", "name": "Ethan Ladanyi", "file": "mp3/29-ethan-ladanyi.mp3" },
-  { "id": "p2", "number": "2", "name": "Liam Pichardo", "file": "mp3/2-liam-pichardo.mp3" },
   { "id": "p4", "number": "4", "name": "Sam Va Tassel", "file": "mp3/4-sam-va-tassel.mp3" },
   { "id": "p15", "number": "15", "name": "Manson Frank", "file": "mp3/15-manson-frank.mp3" },
   { "id": "p-velez", "number": "16", "name": "Jonathan Velez", "file": "mp3/16-jonathan-velez.mp3" },
@@ -18,5 +17,9 @@
   { "id": "t-allidoiswin", "name": "All I Do Is Win", "file": "mp3/all-i-do-is-win.mp3" },
   { "id": "t-bringemout", "name": "Bring Em Out", "file": "mp3/bring-em-out.mp3" },
   { "id": "t-blackandyellow", "name": "Black and Yellow", "file": "mp3/black-and-yellow.mp3" },
-  { "id": "t-newlevel", "name": "New Level", "file": "mp3/new-level.mp3" }
+  { "id": "t-newlevel", "name": "New Level", "file": "mp3/new-level.mp3" },
+  { "id": "guest-1", "number": "?", "name": "Guest", "file": "mp3/guest1.mp3", "guestSong": "Up" },
+  { "id": "guest-2", "number": "?", "name": "Guest", "file": "mp3/guest2.mp3", "guestSong": "Big Stepper" },
+  { "id": "guest-3", "number": "?", "name": "Guest", "file": "mp3/guest3.mp3", "guestSong": "John Cena's Theme", "guestDefault": true },
+  { "id": "guest-4", "number": "?", "name": "Guest", "file": "mp3/guest4.mp3", "guestSong": "Suave" }
 ]

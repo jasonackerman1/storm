@@ -15,7 +15,7 @@
   // bucket the service worker serves from, without needing a message
   // round-trip through a service worker that may not be controlling yet
   // (e.g. the very first install, before any SW has activated).
-  var CACHE_NAME = 'storm-cache-v39';
+  var CACHE_NAME = 'storm-cache-v41';
 
   // The real, current batting order — bump DEFAULT_LINEUP_VERSION whenever
   // this changes so it gets applied once on every device (even ones with
@@ -29,9 +29,11 @@
     // l5 deliberately omitted: Branch is playing fall football and may only
     // make a few games, so he no longer gets a default lineup slot (he's
     // still in roster.json, assign him manually on days he's actually here).
+    // l13 deliberately omitted: Liam Pichardo (formerly here) left the team —
+    // see roster.json, his id is gone entirely, not just pulled from defaults.
     l1: 'p5', l2: 'p99', l3: 'p12', l4: 'p13', l6: 'p68',
     l7: 'p7', l8: 'p29', l9: 'p4', l10: 'p15', l11: 'p-tineo',
-    l12: 'p-velez', l13: 'p2'
+    l12: 'p-velez'
   };
 
   var SLOT_DEFS = [
@@ -225,6 +227,26 @@
     });
   }
 
+  // Clears any slot still pointing at a player id that no longer exists in
+  // the library — e.g. a bundled roster.json entry removed because a kid
+  // left the team, while a device's saved lineup still has them assigned.
+  // selectSlot() already treats such a "ghost" slot as empty for tap
+  // purposes, but this actually cleans up the persisted state instead of
+  // just masking it every time, so it doesn't linger indefinitely. Only
+  // ever fires right after init's first rebuildLibrary(), before anything
+  // is rendered, so there's no risk of racing a real assignment made during
+  // the session.
+  function pruneStaleSlots() {
+    var changed = false;
+    Object.keys(slots).forEach(function (slotId) {
+      var playerId = slots[slotId];
+      if (!playerId) return;
+      var stillExists = library.some(function (p) { return p.id === playerId; });
+      if (!stillExists) { slots[slotId] = null; changed = true; }
+    });
+    if (changed) saveSlots();
+  }
+
   // Only bundled (roster.json) songs depend on the network/service-worker
   // cache — phone-added songs live in IndexedDB and are always available
   // offline regardless. This tells you whether a song could actually
@@ -266,7 +288,14 @@
   // a mis-tap on the wrong slot no longer fires that player's song.
   function selectSlot(slotId) {
     var playerId = slots[slotId];
-    if (!playerId) { openAssignSheet(slotId); return; }
+    // Checking the resolved player (not just a truthy id) also catches a
+    // "ghost" slot — one whose assigned id no longer exists in the library
+    // because a bundled roster.json entry was removed out from under it
+    // (e.g. a player leaving the team) — and routes it through the same
+    // assign flow as a genuinely empty slot, matching what the tile itself
+    // already shows ("+ Assign").
+    var player = playerId ? library.filter(function (p) { return p.id === playerId; })[0] : null;
+    if (!player) { openAssignSheet(slotId); return; }
     selectedSlot = slotId;
     renderGrid();
     updateActionBar();
@@ -686,7 +715,7 @@
       var row = document.createElement('div');
       row.className = 'manage-row';
       row.innerHTML = (p.number ? '<span class="num">' + escapeHtml(p.number) + '</span>' : '') +
-        '<span class="name">' + escapeHtml(p.name) + '</span>';
+        '<span class="name">' + escapeHtml(p.name) + (p.guestSong ? ' — ' + escapeHtml(p.guestSong) + (p.guestDefault ? ' (default)' : '') : '') + '</span>';
       if (p.source === 'local') {
         var delBtn = document.createElement('button');
         delBtn.className = 'list-row delete-row';
@@ -762,8 +791,11 @@
     sortedLibrary.forEach(function (p) {
       var row = document.createElement('button');
       row.className = 'list-row';
+      // Guest roster entries all share the same name/number ("Guest" / "?")
+      // so they're indistinguishable in this list without their song name —
+      // guestSong/guestDefault (see bundledPlayers mapping) fill that in.
       row.innerHTML = (p.number ? '<span class="num">' + escapeHtml(p.number) + '</span>' : '') +
-        '<span>' + escapeHtml(p.name) + '</span>' +
+        '<span>' + escapeHtml(p.name) + (p.guestSong ? ' — ' + escapeHtml(p.guestSong) + (p.guestDefault ? ' (default)' : '') : '') + '</span>' +
         '<span class="src-tag">' + (p.source === 'bundled' ? 'built-in' : 'phone') + '</span>';
       row.addEventListener('click', function () {
         slots[currentAssignSlot] = p.id;
@@ -1457,7 +1489,16 @@
       .catch(function () { return []; })
       .then(function (data) {
         bundledPlayers = (data || []).map(function (p) {
-          return { id: p.id, number: p.number, name: p.name, file: p.file, nameClipFile: p.nameClipFile || null, source: 'bundled' };
+          // guestSong/guestDefault are only ever set on the small pool of
+          // "Guest" roster entries in roster.json — used to label them by
+          // their actual song in the assign sheet, since they otherwise all
+          // share the same name/number ("Guest" / "?").
+          return {
+            id: p.id, number: p.number, name: p.name, file: p.file,
+            nameClipFile: p.nameClipFile || null,
+            guestSong: p.guestSong || null, guestDefault: !!p.guestDefault,
+            source: 'bundled'
+          };
         });
         return idbGetAll(STORE);
       })
@@ -1495,6 +1536,7 @@
       .catch(function () { localSoundboardClips = []; })
       .then(function () {
         rebuildLibrary();
+        pruneStaleSlots();
         rebuildSoundboardLibrary();
         renderGrid();
         renderManageList();
