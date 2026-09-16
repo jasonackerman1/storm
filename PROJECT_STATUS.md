@@ -2,6 +2,10 @@
 
 _Last updated: 2026-09-15_
 
+## Soundboard trimmed per Owen's feedback (2026-09-15, `78a204a`), confirmed pushed
+
+Owen asked to remove 6 sound effects from the board: Suspense, X-Files Theme, We Are the Champions, Impressive, Outstanding, Fatality — explicitly keep the files, just take them off the board so they can be restored later. Removed all 6 from `soundboard.json` only (the board is entirely data-driven off this file — no other hardcoded lists to touch); the mp3s stay untouched in `sfx/`. `CACHE_NAME` bumped v44→v45 so installed devices actually pick up the smaller board. 8 clips remain: Air Horn, Air Raid Siren, Crack of the Bat, Crowd Cheer, Final Jeopardy, Finish Him!, MLB Sound Bite, Chewy, Thunder, Yeet, Evil Laugh, Undertaker's Bell. To restore any of the 6 later, just re-add their entries to `soundboard.json` and bump `CACHE_NAME` again.
+
 ## ⚠️ OPEN INVESTIGATION (2026-09-15 evening) — silent switch may mute playback, no fix built yet
 
 Jason reported total silence on his phone (soundboard + lineup). Ruled out any code regression — the only commit since the last confirmed-working state (the Thunder boost) is a docs-only `PROJECT_STATUS.md` change, and the exact same live build plays fine in a desktop browser. **Real cause found: his phone's physical silent/ring switch.** On ring, sound works; on silent, nothing plays — and this is new behavior since the Web Audio playback engine shipped (2026-09-14, `c7174c4`).
