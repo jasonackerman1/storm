@@ -1,6 +1,14 @@
 # Storm — Project Status
 
-_Last updated: 2026-09-15_
+_Last updated: 2026-09-17_
+
+## Soundboard restored to full + new clips + 5-column layout (2026-09-17), committed, not yet deployed/confirmed
+
+Jason asked to reevaluate everything in `sfx/` and put it all back on the board, since some clips had deliberately been held back. Restored the 5 clips Owen asked removed on 2026-09-15 that still have real files on disk: Suspense 😨, X-Files Theme 🛸, Impressive 👏, Outstanding! 🌟, Fatality 💀 (same id/label/icon/file as before — no reprocessing needed). **The 6th removed clip, "We Are the Champions" (`wearechamps.mp3`), could NOT be restored — the file no longer exists on disk or in git history** (it was never actually a tracked/committed file, just referenced in `soundboard.json` at the time). Same problem separately affects "Yeet" (`sfx/yeet.wav`), which had already been dropped as a dead entry back on 2026-09-16 (`43336ec`) for the same reason. Both need a fresh source file from Jason if he wants them back — flagged to him directly, not silently dropped.
+
+Also added the 4 new files Jason had just dropped into `sfx/` (previously untracked): Dun Dun Dunnn 😱 (`DonDonDooon.mp3`), Children Yeah 🗣️ (`chilrenYeah.wav`), Mine! 🙋 (`mine.mp3`), Snoop Dogg Beat 🎵 (`snoop-dogg-base-instrumental-mp3cut.mp3`). **These 4 labels/icons are Claude's best guess from the filename alone — unconfirmed, same as the earlier `mlb.swf.mp3`→"MLB Sound Bite" precedent** — Claude cannot listen to audio content. Flag any wrong ones to relabel.
+
+Board is now 26 clips total (was 17). At Jason's request, the soundboard grid moved from 4 columns to 5 (`.soundboard-grid` in `css/style.css`), with tile corner radius, gap, icon size, and label font-size all scaled down slightly to keep labels readable at the smaller tile size. Verified via a temporary Playwright/puppeteer-core screenshot against a local server (removed after) — real 5-column grid render, all 26 tiles present, labels wrap cleanly, zero console errors. `CACHE_NAME` bumped v47→v48 so the new board and files actually reach installed devices. **Not yet pushed/deployed or seen live on a real phone — that's next.**
 
 ## Soundboard trimmed per Owen's feedback (2026-09-15, `78a204a`), confirmed pushed
 

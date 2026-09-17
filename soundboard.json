@@ -15,5 +15,14 @@
   { "id": "sfx-xsound", "label": "X Sound", "icon": "❌", "file": "sfx/X.mp3" },
   { "id": "sfx-nemesis", "label": "Nemesis", "icon": "😤", "file": "sfx/tf_nemesis.mp3" },
   { "id": "sfx-spongebobdisappointed", "label": "Spongebob Disappointed", "icon": "😞", "file": "sfx/spongebob-disappointed.mp3" },
-  { "id": "sfx-failwah", "label": "Fail (Wah Wah Wah)", "icon": "😩", "file": "sfx/wah-wah-wah-fail.mp3" }
+  { "id": "sfx-failwah", "label": "Fail (Wah Wah Wah)", "icon": "😩", "file": "sfx/wah-wah-wah-fail.mp3" },
+  { "id": "sfx-suspense", "label": "Suspense", "icon": "😨", "file": "sfx/Suspense.mp3" },
+  { "id": "sfx-xfiles", "label": "X-Files Theme", "icon": "🛸", "file": "sfx/xfiles.mp3" },
+  { "id": "sfx-impressive", "label": "Impressive", "icon": "👏", "file": "sfx/Inpressive.mp3" },
+  { "id": "sfx-outstanding", "label": "Outstanding!", "icon": "🌟", "file": "sfx/Outstanding.mp3" },
+  { "id": "sfx-fatality", "label": "Fatality", "icon": "💀", "file": "sfx/fatality.mp3" },
+  { "id": "sfx-dondondooon", "label": "Dun Dun Dunnn", "icon": "😱", "file": "sfx/DonDonDooon.mp3" },
+  { "id": "sfx-childrenyeah", "label": "Children Yeah", "icon": "🗣️", "file": "sfx/chilrenYeah.wav" },
+  { "id": "sfx-mine", "label": "Mine!", "icon": "🙋", "file": "sfx/mine.mp3" },
+  { "id": "sfx-snoopbeat", "label": "Snoop Dogg Beat", "icon": "🎵", "file": "sfx/snoop-dogg-base-instrumental-mp3cut.mp3" }
 ]

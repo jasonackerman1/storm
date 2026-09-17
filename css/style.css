@@ -213,16 +213,16 @@ body {
   min-height: 0;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  padding: 12px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  padding: 10px;
   align-content: start;
 }
 
 .soundboard-tile {
   position: relative;
   aspect-ratio: 1 / 1;
-  border-radius: 10px;
+  border-radius: 8px;
   background:
     repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 2px, transparent 2px 6px),
     linear-gradient(160deg, #1c1815, #0e0b09);
@@ -232,12 +232,12 @@ body {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 6px;
+  padding: 4px;
   touch-action: none;
 }
 
 .soundboard-tile-icon {
-  font-size: clamp(1.3rem, 6vw, 1.7rem);
+  font-size: clamp(1.05rem, 4.8vw, 1.4rem);
   line-height: 1;
 }
 
@@ -249,11 +249,11 @@ body {
 }
 
 .soundboard-tile-label {
-  font-size: clamp(0.62rem, 3vw, 0.78rem);
+  font-size: clamp(0.54rem, 2.4vw, 0.68rem);
   font-weight: 700;
   text-align: center;
   color: var(--text);
-  line-height: 1.2;
+  line-height: 1.15;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 3;
