@@ -8,7 +8,12 @@
   { "id": "sfx-mlbsoundbite", "label": "MLB Sound Bite", "icon": "⚾", "file": "sfx/mlb.swf.mp3" },
   { "id": "sfx-chewy", "label": "Chewy", "icon": "🐻", "file": "sfx/chewy.mp3" },
   { "id": "sfx-thunder", "label": "Thunder", "icon": "⛈️", "file": "sfx/thunder.mp3" },
-  { "id": "sfx-yeet", "label": "Yeet", "icon": "🚀", "file": "sfx/yeet.wav" },
   { "id": "sfx-evillaugh", "label": "Evil Laugh", "icon": "😈", "file": "sfx/evil-laugh.mp3" },
-  { "id": "sfx-undertakersbell", "label": "Undertaker's Bell", "icon": "🔔", "file": "sfx/undertakers-bell.mp3" }
+  { "id": "sfx-undertakersbell", "label": "Undertaker's Bell", "icon": "🔔", "file": "sfx/undertakers-bell.mp3" },
+  { "id": "sfx-run", "label": "Run!", "icon": "🏃", "file": "sfx/Run.mp3" },
+  { "id": "sfx-bruh", "label": "Bruh", "icon": "😑", "file": "sfx/bruh.mp3" },
+  { "id": "sfx-xsound", "label": "X Sound", "icon": "❌", "file": "sfx/X.mp3" },
+  { "id": "sfx-nemesis", "label": "Nemesis", "icon": "😤", "file": "sfx/tf_nemesis.mp3" },
+  { "id": "sfx-spongebobdisappointed", "label": "Spongebob Disappointed", "icon": "😞", "file": "sfx/spongebob-disappointed.mp3" },
+  { "id": "sfx-failwah", "label": "Fail (Wah Wah Wah)", "icon": "😩", "file": "sfx/wah-wah-wah-fail.mp3" }
 ]
