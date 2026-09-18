@@ -17,13 +17,13 @@
   // bucket the service worker serves from, without needing a message
   // round-trip through a service worker that may not be controlling yet
   // (e.g. the very first install, before any SW has activated).
-  var CACHE_NAME = 'storm-cache-v51';
+  var CACHE_NAME = 'storm-cache-v53';
 
   // The real, current batting order — bump DEFAULT_LINEUP_VERSION whenever
   // this changes so it gets applied once on every device (even ones with
   // leftover state from earlier testing), without ever clobbering whatever
   // customizing (reorders/reassignments) happens afterward.
-  var DEFAULT_LINEUP_VERSION = 3;
+  var DEFAULT_LINEUP_VERSION = 4;
   var DEFAULT_SLOTS = {
     sp1: 't-stormiscoming',
     sp2: 't-letsgo',
@@ -31,11 +31,12 @@
     // l5 deliberately omitted: Branch is playing fall football and may only
     // make a few games, so he no longer gets a default lineup slot (he's
     // still in roster.json, assign him manually on days he's actually here).
-    // l13 deliberately omitted: Liam Pichardo (formerly here) left the team —
-    // see roster.json, his id is gone entirely, not just pulled from defaults.
     l1: 'p5', l2: 'p99', l3: 'p12', l4: 'p13', l6: 'p68',
     l7: 'p7', l8: 'p29', l9: 'p4', l10: 'p15', l11: 'p-tineo',
-    l12: 'p-velez'
+    l12: 'p-velez',
+    // Pichardo always bats last by design — back on the team, restored to
+    // his original l13 slot.
+    l13: 'p2'
   };
 
   var SLOT_DEFS = [

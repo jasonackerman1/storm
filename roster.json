@@ -11,6 +11,7 @@
   { "id": "p15", "number": "15", "name": "Mason Frank", "file": "mp3/15-mason-frank.mp3", "nameClipFile": "mp3/15-mason-frank-announcer.mp3", "announcerOverlapFraction": 0.5 },
   { "id": "p-velez", "number": "16", "name": "Johnathan Velez", "file": "mp3/16-johnathan-velez.mp3", "nameClipFile": "mp3/16-johnathan-velez-announcer.mp3", "announcerOverlapFraction": 0.5 },
   { "id": "p-tineo", "number": "14", "name": "Liam Tineo", "file": "mp3/14-liam-tineo.mp3", "nameClipFile": "mp3/14-liam-tineo-announcer.mp3", "announcerOverlapFraction": 0.5 },
+  { "id": "p2", "number": "2", "name": "Liam Pichardo", "file": "mp3/2-liam-pichardo.mp3", "nameClipFile": "mp3/2-liam-pichardo-announcer.mp3", "announcerOverlapFraction": 0.5 },
   { "id": "t-letsgo", "name": "Let's Go (Trick Daddy)", "file": "mp3/trick-daddy-lets-go.mp3" },
   { "id": "t-stormiscoming", "name": "A Storm is Coming", "file": "mp3/a-storm-is-coming.mp3" },
   { "id": "t-swaggerlikeus", "name": "Swagger Like Us", "file": "mp3/swagger like us.mp3" },
@@ -20,6 +21,5 @@
   { "id": "t-newlevel", "name": "New Level", "file": "mp3/new-level.mp3" },
   { "id": "guest-1", "number": "?", "name": "Guest", "file": "mp3/guest1.mp3", "guestSong": "Up" },
   { "id": "guest-2", "number": "?", "name": "Guest", "file": "mp3/guest2.mp3", "guestSong": "Big Stepper" },
-  { "id": "guest-3", "number": "?", "name": "Guest", "file": "mp3/guest3.mp3", "guestSong": "John Cena's Theme", "guestDefault": true },
-  { "id": "guest-4", "number": "?", "name": "Guest", "file": "mp3/guest4.mp3", "guestSong": "Suave" }
+  { "id": "guest-3", "number": "?", "name": "Guest", "file": "mp3/guest3.mp3", "guestSong": "John Cena's Theme", "guestDefault": true }
 ]
