@@ -23,5 +23,8 @@
   { "id": "sfx-xfiles", "label": "X-Files Theme", "icon": "🛸", "file": "sfx/xfiles.mp3" },
   { "id": "sfx-childrenyeah", "label": "Children Yeah", "icon": "🗣️", "file": "sfx/chilrenYeah.wav" },
   { "id": "sfx-mine", "label": "Mine!", "icon": "🙋", "file": "sfx/mine.mp3" },
-  { "id": "sfx-snoopbeat", "label": "Snoop Dogg Beat", "icon": "🎵", "file": "sfx/snoop-dogg-base-instrumental-mp3cut.mp3" }
+  { "id": "sfx-snoopbeat", "label": "Snoop Dogg Beat", "icon": "🎵", "file": "sfx/snoop-dogg-base-instrumental-mp3cut.mp3" },
+  { "id": "sfx-batmantransition", "label": "Batman Transition", "icon": "🦇", "file": "sfx/batman-transition.mp3" },
+  { "id": "sfx-imbatman", "label": "I'm Batman", "icon": "🦇", "file": "sfx/im-batman.mp3" },
+  { "id": "sfx-justabitoutside", "label": "Just a Bit Outside", "icon": "⚾", "file": "sfx/just-a-bit-outside.mp3" }
 ]
