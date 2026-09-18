@@ -9,6 +9,7 @@
   var SLOTS_KEY = 'storm-slots-v2';
   var STOP_ADVANCES_KEY = 'storm-stop-advances';
   var ANNOUNCER_OVERLAP_KEY = 'storm-announcer-overlap';
+  var ANNOUNCER_ENABLED_KEY = 'storm-announcer-enabled';
   var DEFAULT_LINEUP_VERSION_KEY = 'storm-default-lineup-version';
 
   // MUST match CACHE_NAME in sw.js — bump both together. Used by the startup
@@ -16,7 +17,7 @@
   // bucket the service worker serves from, without needing a message
   // round-trip through a service worker that may not be controlling yet
   // (e.g. the very first install, before any SW has activated).
-  var CACHE_NAME = 'storm-cache-v44';
+  var CACHE_NAME = 'storm-cache-v50';
 
   // The real, current batting order — bump DEFAULT_LINEUP_VERSION whenever
   // this changes so it gets applied once on every device (even ones with
@@ -56,6 +57,7 @@
   var dragState = null;
   var stopAdvancesEnabled = true;
   var announcerOverlapEnabled = true;
+  var announcerEnabled = true;
   var objectUrlCache = new Map();
   var nameClipObjectUrlCache = new Map();
   var activeSequenceOnComplete = null;
@@ -248,6 +250,24 @@
 
   function saveAnnouncerOverlapSetting() {
     localStorage.setItem(ANNOUNCER_OVERLAP_KEY, announcerOverlapEnabled ? '1' : '0');
+  }
+
+  // Default ON: name-announcer clips play before/with each song, same as
+  // today. Turning this off makes firePlayback() treat every player as if
+  // it had no name clip at all for that play — walk-up songs play by
+  // themselves, on-the-fly, without needing to touch any per-player data.
+  function loadAnnouncerEnabledSetting() {
+    try {
+      var raw = localStorage.getItem(ANNOUNCER_ENABLED_KEY);
+      if (raw === null) return true;
+      return raw === '1';
+    } catch (e) {
+      return true;
+    }
+  }
+
+  function saveAnnouncerEnabledSetting() {
+    localStorage.setItem(ANNOUNCER_ENABLED_KEY, announcerEnabled ? '1' : '0');
   }
 
   function rebuildLibrary() {
@@ -494,9 +514,17 @@
     // play can run on buffers — never mix a decoded buffer with a URL-based
     // clip in the same play, which would need a much harder mixed-node/
     // mixed-element state machine to sequence correctly.
-    var needsNameClip = !!nameClipSrcFor(player);
+    //
+    // When the Play Announcers setting is off, treat this player as if it
+    // had no name clip at all for this one play — nulling both the src and
+    // the buffer here (rather than just skipping playback of them further
+    // down) means every branch below, including the overlap-mode check,
+    // automatically falls through to "just play the song" with no separate
+    // gating needed.
+    var nameClipSrc = announcerEnabled ? nameClipSrcFor(player) : null;
+    var needsNameClip = !!nameClipSrc;
     var songBuffer = songBufferFor(player);
-    var nameClipBuffer = nameClipBufferFor(player);
+    var nameClipBuffer = announcerEnabled ? nameClipBufferFor(player) : null;
 
     // Overlapping announcer/song playback: only kicks in when a player's
     // roster.json entry sets announcerOverlapFraction (a number 0-1 — 0.5,
@@ -515,8 +543,9 @@
       playSequenceBuffers([nameClipBuffer, songBuffer], onFinished);
     } else {
       // Graceful fallback is automatic: playSequence() drops the null name
-      // clip entry when a player has none, and just plays the song.
-      playSequence([nameClipSrcFor(player), songSrc], onFinished);
+      // clip entry when a player has none (or when Play Announcers is off),
+      // and just plays the song.
+      playSequence([nameClipSrc, songSrc], onFinished);
     }
   }
 
@@ -555,6 +584,12 @@
     var el = document.getElementById('setting-announcer-overlap');
     if (!el) return;
     el.checked = announcerOverlapEnabled;
+  }
+
+  function updateAnnouncerEnabledSwitch() {
+    var el = document.getElementById('setting-announcer-enabled');
+    if (!el) return;
+    el.checked = announcerEnabled;
   }
 
   // A song that finishes on its own (not manually stopped) means that
@@ -1248,6 +1283,11 @@
       saveAnnouncerOverlapSetting();
     });
 
+    document.getElementById('setting-announcer-enabled').addEventListener('change', function (e) {
+      announcerEnabled = e.target.checked;
+      saveAnnouncerEnabledSetting();
+    });
+
     document.getElementById('btn-refresh-content').addEventListener('click', function () {
       var btn = this;
       btn.disabled = true;
@@ -1599,6 +1639,7 @@
     slots = loadSlots();
     stopAdvancesEnabled = loadStopAdvancesSetting();
     announcerOverlapEnabled = loadAnnouncerOverlapSetting();
+    announcerEnabled = loadAnnouncerEnabledSetting();
 
     fetch('roster.json', { cache: 'no-store' })
       .then(function (res) { return res.ok ? res.json() : []; })
@@ -1665,6 +1706,7 @@
         updateActionBar();
         updateStopAdvanceSwitch();
         updateAnnouncerOverlapSwitch();
+        updateAnnouncerEnabledSwitch();
         registerServiceWorker();
         bindWakeLock();
         runStartupMediaCheck();
