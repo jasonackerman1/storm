@@ -7,7 +7,7 @@
   { "id": "sfx-spongebobdisappointed", "label": "Spongebob Disappointed", "icon": "😞", "file": "sfx/spongebob-disappointed.mp3" },
   { "id": "sfx-failwah", "label": "Fail (Wah Wah Wah)", "icon": "😩", "file": "sfx/wah-wah-wah-fail.mp3" },
   { "id": "sfx-bruh", "label": "Bruh", "icon": "😑", "file": "sfx/bruh.mp3" },
-  { "id": "sfx-nemesis", "label": "Nemesis", "icon": "😤", "file": "sfx/tf_nemesis.mp3" },
+  { "id": "sfx-nemesis", "label": "Sad Walk", "icon": "😤", "file": "sfx/tf_nemesis.mp3" },
   { "id": "sfx-dondondooon", "label": "Dun Dun Dunnn", "icon": "😱", "file": "sfx/DonDonDooon.mp3" },
   { "id": "sfx-airhorn", "label": "Air Horn", "icon": "📣", "file": "sfx/mlg-airhorn.mp3" },
   { "id": "sfx-airraidsiren", "label": "Air Raid Siren", "icon": "🚨", "file": "sfx/air-raid-siren-sound.mp3" },
