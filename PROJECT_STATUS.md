@@ -1,6 +1,27 @@
 # Storm — Project Status
 
-_Last updated: 2026-09-17_
+_Last updated: 2026-10-01_
+
+## New walk-up songs for Kameren Branch #11 and Caleb Gingras #68 (2026-10-01, `ff74874`), pushed
+
+Jason dropped new full-length (~4:12) source files into `mp3/` under the existing filenames, renaming the old clips to `*_old.mp3` himself.
+- No start times given, no leading silence detected → standard treatment: 12.00s cut from 0:00, 1s tail fade, two-pass loudnorm to -11 LUFS/-1.0dBTP. Branch landed -15.7dB mean, Gingras -14.1dB mean (both within roster range).
+- Full originals backed up to session scratchpad before cutting (session-only — re-source from Jason's files for any re-cut).
+- `mp3/11-kameren-branch_old.mp3` and `mp3/68-caleb-gingras_old.mp3` intentionally left untracked/uncommitted — old clips are already in git history.
+- `CACHE_NAME` bumped v53→v54 in both `js/app.js` and `sw.js` (verified matching).
+- **Open:** Jason to listen on device; if either 0:00 intro is weak, he'll give a start timestamp for a re-cut.
+
+## Liam Pichardo restored to the roster and default lineup (2026-09-18, `61592a6`), pushed
+
+Coach confirmed Liam Pichardo is back on the team. Restored him as a real roster entry again:
+- **Song**: `mp3/guest4.mp3` (the "Suave" guest-slot entry his song had been repurposed into when he left on 2026-09-15) renamed back to `mp3/2-liam-pichardo.mp3` — that guest slot is gone now that it's his personal song again. `roster.json`'s `guest-4` entry removed.
+- **Announcer clip**: Jason sourced a new "now batting" clip; processed the same way as the rest of the 2026-09-15 batch (trimmed ~0.07s leading silence, two-pass loudnorm to -11 LUFS/-1.0dBTP, landed at -14.7dB mean — in line with the rest of the batch) → `mp3/2-liam-pichardo-announcer.mp3`.
+- **roster.json**: new entry, `id: "p2"`, `#2 Liam Pichardo`, both files wired up, `announcerOverlapFraction: 0.5` matching every other real player.
+- **Lineup**: restored to `l13`, his original "always bats last" slot. `DEFAULT_LINEUP_VERSION` bumped 3→4 so it applies automatically on every device (unlike his 2026-09-15 removal, which deliberately did NOT bump the version to avoid clobbering live device state — this time a bump is the correct call since we're re-adding a real slot assignment, not just tidying up).
+- `CACHE_NAME` bumped v52→v53 in both `js/app.js` and `sw.js`. **Also fixed a real pre-existing drift**: the two files' `CACHE_NAME`s had silently gone out of sync again (`app.js` was v51, `sw.js` was v52) after the soundboard-only commits between 2026-09-15 and 2026-09-17 bumped `sw.js` without touching `app.js` — same recurring bug class as the one fixed in `2771d02`. Worth double-checking both files agree any time only one of them seems to need a bump.
+- `test/smoke.js` line pinning `storm-default-lineup-version` to skip the baked-in migration was updated 3→4 to match — this had gone stale the moment `DEFAULT_LINEUP_VERSION` bumped, and caused 2 of 13 checks to fail (the migration fired mid-test and overwrote the test's custom seeded slots) until fixed. All 13 checks pass after the fix.
+- Full roster is now **14 players** (Pichardo back in), still with real names/numbers/songs, no placeholders.
+- Committed and pushed (`61592a6`). GitHub Pages deploy not independently confirmed this session (API token attempt got a 401) — worth a look on Jason's phone once it's had a minute to build.
 
 ## 3 new soundboard clips + Dom Diaz's walk-up song replaced (2026-09-17), committed, not yet pushed
 
