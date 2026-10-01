@@ -2,7 +2,15 @@
 
 _Last updated: 2026-10-01_
 
-## Kameren Branch #11 walk-up — swear word muted (2026-10-01), pushed
+## Kameren Branch #11 walk-up — swear word reversed in vocals only (2026-10-01), pushed
+
+- Jason disliked the mute version below (`2ed1a48`) — the whole track dropped out. Redone from the uncensored backup.
+- Split the 13s cut into vocals + music with Demucs (`htdemucs`, two-stem, temp scratchpad venv — not committed). Reversed only the vocal stem over 9.84–10.08s with 12ms crossfades, remixed with the untouched music, light limiter (peak -1.3dB, mean -15.4dB vs -15.1dB before). Music keeps playing through the word.
+- Verified: transcriber now hears "switch" there; window loudness unchanged (-18.2dB vs -17.9dB).
+- Uncensored backup still at `/Users/jackerman/Documents/Storm/11-kameren-branch-13s-BEFORE-CENSOR.mp3`. `CACHE_NAME` v56→v57.
+- **Open:** Jason to listen.
+
+## (Superseded) Kameren Branch #11 walk-up — swear word muted (2026-10-01), pushed
 
 - Song says "hit the shit out of the world" at ~9.86–10.06s. Located with faster-whisper word timestamps (temp venv in scratchpad, not committed).
 - Muted 9.82–10.10s (30ms fade in/out to avoid clicks) — beat drops out for ~¼s too, since vocals can't be separated from the music. Verified: that window went from -4.3dB peak to -91dB. Length still 13.00s.
