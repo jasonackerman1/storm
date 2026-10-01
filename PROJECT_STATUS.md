@@ -2,6 +2,14 @@
 
 _Last updated: 2026-10-01_
 
+## Kameren Branch #11 walk-up lengthened to 13s (2026-10-01, `6e53359`), pushed
+
+- Jason asked for one more second. Recut the new song from 0:00 to 13.00s, 1s fade now 12–13s, same two-pass loudnorm (-15.1dB mean, vs. -15.7dB at 12s).
+- Source: the full original backed up in the previous session's scratchpad was still there, so no resend needed.
+- Branch is now the only player on a 13s cut; the rest are 12s (or older 10s).
+- `CACHE_NAME` bumped v54→v55 in both `js/app.js` and `sw.js`.
+- **Open:** Jason to listen on device.
+
 ## New walk-up songs for Kameren Branch #11 and Caleb Gingras #68 (2026-10-01, `ff74874`), pushed
 
 Jason dropped new full-length (~4:12) source files into `mp3/` under the existing filenames, renaming the old clips to `*_old.mp3` himself.
