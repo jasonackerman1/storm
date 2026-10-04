@@ -1,6 +1,15 @@
 # Storm — Project Status
 
-_Last updated: 2026-10-01_
+_Last updated: 2026-10-04_
+
+## New Mason Frank #15 song + Robby Glas added as "#?" (2026-10-04, `9f7d81e`, `69da916`), pushed
+
+- **Mason Frank:** Jason dropped a new full-length song (old clip renamed `15-mason-frank_old.mp3`). Cut it to 12s, then Jason asked for the full version back to edit it himself. He trimmed about 0.8s and sent it back. Re-cut from 0:00 of his edit: 12.00s, 1s fade, two-pass loudnorm (-11.9dB mean). Backups outside the repo: `/Users/jackerman/Documents/Storm/15-mason-frank-ORIGINAL-FULL.mp3` (his first file) and `15-mason-frank-JASON-EDIT.mp3` (his edit).
+- **Robby Glas:** new player, playing up from a lower team. He shares Owen's #7, so his number is `?` until he's assigned one. His tile reads **GLAS / ?**. Roster id `p-glas`, file `mp3/robby-glas.mp3` (no number in the filename), same 12s/loudnorm treatment (-11.5dB mean). No announcer clip and not in the default lineup; assign him by hand. Full original: `/Users/jackerman/Documents/Storm/robby-glas-ORIGINAL-FULL.mp3`.
+- `CACHE_NAME` v57→v58→v59 (both files match). Smoke test 13/13 pass.
+- `_old` clips for Branch, Gingras and Frank are intentionally left untracked.
+- **Open:** Jason to listen to both on a real device. Glas's real number, and an announcer clip if Jason wants one.
+
 
 ## Kameren Branch #11 walk-up — swear word reversed in vocals only (2026-10-01), pushed
 
