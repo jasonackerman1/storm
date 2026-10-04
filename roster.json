@@ -12,6 +12,7 @@
   { "id": "p-velez", "number": "16", "name": "Johnathan Velez", "file": "mp3/16-johnathan-velez.mp3", "nameClipFile": "mp3/16-johnathan-velez-announcer.mp3", "announcerOverlapFraction": 0.5 },
   { "id": "p-tineo", "number": "14", "name": "Liam Tineo", "file": "mp3/14-liam-tineo.mp3", "nameClipFile": "mp3/14-liam-tineo-announcer.mp3", "announcerOverlapFraction": 0.5 },
   { "id": "p2", "number": "2", "name": "Liam Pichardo", "file": "mp3/2-liam-pichardo.mp3", "nameClipFile": "mp3/2-liam-pichardo-announcer.mp3", "announcerOverlapFraction": 0.5 },
+  { "id": "p-glas", "number": "?", "name": "Robby Glas", "file": "mp3/robby-glas.mp3" },
   { "id": "t-letsgo", "name": "Let's Go (Trick Daddy)", "file": "mp3/trick-daddy-lets-go.mp3" },
   { "id": "t-stormiscoming", "name": "A Storm is Coming", "file": "mp3/a-storm-is-coming.mp3" },
   { "id": "t-swaggerlikeus", "name": "Swagger Like Us", "file": "mp3/swagger like us.mp3" },
