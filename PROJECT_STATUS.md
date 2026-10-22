@@ -1,6 +1,15 @@
 # Storm — Project Status
 
-_Last updated: 2026-10-04_
+_Last updated: 2026-10-21_
+
+## Robby Glas announcer clip added (2026-10-21, `102b2ed`), pushed and live
+
+- Jason dropped `mp3/7-Robby-Glas-announcer.mp3`. The raw file was very quiet (-29.2dB mean vs about -15dB for the other announcers).
+- Trimmed 0.04s of leading silence and ran a two-pass loudnorm (-11 LUFS target, -1 dBTP): now 5.45s, -15.0dB mean, -1.3dB peak, in line with the others.
+- Saved as `mp3/robby-glas-announcer.mp3` (no number, matching `robby-glas.mp3`) and wired in as `nameClipFile` with the standard `announcerOverlapFraction: 0.5`. `sw.js` precaches it from the roster automatically.
+- `CACHE_NAME` v59→v60 (both files match). Smoke test 13/13 pass. Confirmed live via `curl` (file 200, live roster references it).
+- Jason's original stays untracked in `mp3/` (like the `_old` files); backup copy at `/Users/jackerman/Documents/Storm/robby-glas-announcer-ORIGINAL.mp3`.
+- **Open:** Jason to listen (Refresh App Content first). Glas still needs a real jersey number.
 
 ## New Mason Frank #15 song + Robby Glas added as "#?" (2026-10-04, `9f7d81e`, `69da916`), pushed
 
@@ -8,7 +17,7 @@ _Last updated: 2026-10-04_
 - **Robby Glas:** new player, playing up from a lower team. He shares Owen's #7, so his number is `?` until he's assigned one. His tile reads **GLAS / ?**. Roster id `p-glas`, file `mp3/robby-glas.mp3` (no number in the filename), same 12s/loudnorm treatment (-11.5dB mean). No announcer clip and not in the default lineup; assign him by hand. Full original: `/Users/jackerman/Documents/Storm/robby-glas-ORIGINAL-FULL.mp3`.
 - `CACHE_NAME` v57→v58→v59 (both files match). Smoke test 13/13 pass.
 - `_old` clips for Branch, Gingras and Frank are intentionally left untracked.
-- **Open:** Jason to listen to both on a real device. Glas's real number, and an announcer clip if Jason wants one.
+- **Open:** Jason to listen to both on a real device. Glas's real number. (Announcer clip added 2026-10-21, see above.)
 
 
 ## Kameren Branch #11 walk-up — swear word reversed in vocals only (2026-10-01), pushed
