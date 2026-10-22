@@ -1,6 +1,11 @@
 # Storm — Project Status
 
-_Last updated: 2026-10-21_
+_Last updated: 2026-10-22_
+
+## Robby Glas now #7 (2026-10-22)
+
+- At Jason's request, Glas's roster number changed from `?` to `7`, the same as Owen, until new jerseys come in. His tile now reads **GLAS / 7**. This matches the Storm Branson dashboard.
+- Only `roster.json` changed. It's network-first, so there's no `CACHE_NAME` bump. Smoke test 13/13 pass.
 
 ## Robby Glas announcer clip added (2026-10-21, `102b2ed`), pushed and live
 
