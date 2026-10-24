@@ -355,22 +355,51 @@
     if (selectedSlot && !slots[selectedSlot]) selectedSlot = null;
   }
 
-  function stopPlayback() {
+  // How long a manual Stop takes to fade a walk-up song out instead of
+  // cutting it off mid-word.
+  var STOP_FADE_SECONDS = 1.5;
+
+  // Routes a lineup buffer source through its own gain node so a manual
+  // Stop can fade just that clip out.
+  function connectWithFade(source) {
+    var gain = audioCtx.createGain();
+    source.connect(gain);
+    gain.connect(audioCtx.destination);
+    source.fadeGain = gain;
+  }
+
+  // Null onended before stop() — stop() fires 'ended' too, and a manual
+  // stop must never trigger the chain-continuation/completion callback.
+  // With fade, the source keeps sounding while it ramps down, but it's
+  // already untracked, so the app treats it as stopped right away.
+  function silenceSource(source, fade) {
+    source.onended = null;
+    if (fade && source.fadeGain) {
+      var now = audioCtx.currentTime;
+      var g = source.fadeGain.gain;
+      g.cancelScheduledValues(now);
+      g.setValueAtTime(g.value, now);
+      g.linearRampToValueAtTime(0, now + STOP_FADE_SECONDS);
+      try { source.stop(now + STOP_FADE_SECONDS); } catch (e) {}
+    } else {
+      try { source.stop(); } catch (e) {}
+    }
+  }
+
+  // fade = true only for the Stop button; every other caller (reorder,
+  // reassign, delete) still cuts off instantly.
+  function stopPlayback(fade) {
     var audio = document.getElementById('player-audio');
     // Clear the sequencer's own onended chaining and pending completion
     // callback FIRST — otherwise pausing/rewinding here can still let a
     // queued step or the completion callback fire after a manual stop.
     audio.onended = null;
     if (activeBufferSource) {
-      // Null onended before stop() — stop() fires 'ended' too, and a manual
-      // stop must never trigger the chain-continuation/completion callback.
-      activeBufferSource.onended = null;
-      try { activeBufferSource.stop(); } catch (e) {}
+      silenceSource(activeBufferSource, fade);
       activeBufferSource = null;
     }
     if (secondaryBufferSource) {
-      secondaryBufferSource.onended = null;
-      try { secondaryBufferSource.stop(); } catch (e) {}
+      silenceSource(secondaryBufferSource, fade);
       secondaryBufferSource = null;
     }
     activeSequenceOnComplete = null;
@@ -426,7 +455,7 @@
       }
       var source = audioCtx.createBufferSource();
       source.buffer = queue.shift();
-      source.connect(audioCtx.destination);
+      connectWithFade(source);
       source.onended = playNext;
       activeBufferSource = source;
       source.start(0);
@@ -454,7 +483,7 @@
 
     var nameSource = audioCtx.createBufferSource();
     nameSource.buffer = nameClipBuffer;
-    nameSource.connect(audioCtx.destination);
+    connectWithFade(nameSource);
     secondaryBufferSource = nameSource;
     nameSource.onended = function () {
       if (secondaryBufferSource === nameSource) secondaryBufferSource = null;
@@ -463,7 +492,7 @@
 
     var songSource = audioCtx.createBufferSource();
     songSource.buffer = songBuffer;
-    songSource.connect(audioCtx.destination);
+    connectWithFade(songSource);
     activeBufferSource = songSource;
     songSource.onended = function () {
       if (activeBufferSource === songSource) activeBufferSource = null;
@@ -556,7 +585,7 @@
     // rewinds to the start — the next Play always starts fresh from the top.
     if (currentPlayingSlot === selectedSlot) {
       var stoppedSlot = selectedSlot;
-      stopPlayback();
+      stopPlayback(true);
       // Whether a manual Stop counts as "that batter's at-bat is over" (and
       // should advance) vs. "I stopped it early" (and shouldn't) is a real
       // judgment call that depends on live-game feel — the ADV toggle in
