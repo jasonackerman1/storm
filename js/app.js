@@ -1459,13 +1459,24 @@
 
   function requestWakeLock() {
     if (!('wakeLock' in navigator)) return;
+    if (wakeLockSentinel && !wakeLockSentinel.released) return;
     navigator.wakeLock.request('screen')
-      .then(function (sentinel) { wakeLockSentinel = sentinel; })
+      .then(function (sentinel) {
+        wakeLockSentinel = sentinel;
+        // iOS can drop the lock on its own without a visibility change —
+        // forget it so the next tap asks again.
+        sentinel.addEventListener('release', function () {
+          if (wakeLockSentinel === sentinel) wakeLockSentinel = null;
+        });
+      })
       .catch(function () {}); // e.g. low battery mode — fail silently, app still works
   }
 
   function bindWakeLock() {
     requestWakeLock();
+    // The startup request can be refused before the first touch, and the
+    // lock can be lost silently — re-ask on any tap if we don't hold it.
+    document.addEventListener('pointerdown', requestWakeLock, true);
     document.addEventListener('visibilitychange', function () {
       // The OS releases the lock whenever the tab/app is backgrounded, so
       // it has to be re-requested every time the app comes back to the
