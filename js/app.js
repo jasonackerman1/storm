@@ -376,7 +376,7 @@
 
   // Song First mode (Banana Ball style). Tweak these to taste.
   var SONG_FIRST_DELAY_SECONDS = 2; // music alone before the announcer
-  var SONG_FIRST_DUCK_LEVEL = 0.35;   // music volume while he talks (1 = full)
+  var SONG_FIRST_DUCK_LEVEL = 0.5;   // music volume while he talks (1 = full)
   var SONG_FIRST_DUCK_RAMP = 0.3;     // seconds to turn the music down
   var SONG_FIRST_UNDUCK_RAMP = 0.8;   // seconds to bring it back up after
 
