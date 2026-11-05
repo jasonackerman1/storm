@@ -1488,14 +1488,17 @@
       return 'win ' + window.innerHeight + ' vv ' + (window.visualViewport ? Math.round(window.visualViewport.height) : '-') +
         ' doc ' + document.documentElement.clientHeight + ' scr ' + screen.height +
         '\nbody ' + Math.round(document.body.getBoundingClientRect().height) +
-        ' sa ' + parseInt(cs.paddingTop, 10) + '/' + parseInt(cs.paddingBottom, 10);
+        ' sa ' + parseInt(cs.paddingTop, 10) + '/' + parseInt(cs.paddingBottom, 10) +
+        '\nst ' + (window.navigator.standalone === true ? 'Y' : 'N') +
+        ' vh ' + Math.round(parseFloat(document.documentElement.style.getPropertyValue('--vh') || '0') * 100) +
+        ' css ' + (getComputedStyle(document.body).bottom === 'auto' ? 'new' : 'old');
     }
     var first = snap();
     var changes = 0, last = first;
     function update() {
       var s = snap();
       if (s !== last) { changes++; last = s; }
-      box.textContent = '@0   ' + first.replace('\n', '\n     ') + '\nnow  ' + s.replace('\n', '\n     ') + '\nchanged ' + changes + 'x';
+      box.textContent = '@0   ' + first.replace(/\n/g, '\n     ') + '\nnow  ' + s.replace(/\n/g, '\n     ') + '\nchanged ' + changes + 'x';
     }
     update();
     setInterval(update, 500);
