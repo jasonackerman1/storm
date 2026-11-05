@@ -1433,8 +1433,23 @@
   // doesn't always recompute it on resume, so this sets a --vh custom
   // property from the real window.innerHeight and recomputes it on every
   // point the app could resume, not just once at load.
+  // PROVEN cause (2026-11-05, on-screen readout on Jason's iPhone): on about
+  // half of cold launches from the home screen, iOS reports innerHeight as
+  // 894 instead of 956, short by exactly the 62pt status bar, and never
+  // corrects it. screen.height (956) was right on every launch. So when
+  // installed (standalone) and in portrait, never size the app shorter than
+  // the real screen. In a normal Safari tab the browser bars really do take
+  // space, so innerHeight is used there as before.
+  function appHeightPx() {
+    var h = window.innerHeight;
+    var standalone = window.navigator.standalone === true ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    if (standalone && window.innerWidth < h && screen.height > h) h = screen.height;
+    return h;
+  }
+
   function setViewportHeightVar() {
-    document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
+    document.documentElement.style.setProperty('--vh', (appHeightPx() * 0.01) + 'px');
   }
 
   // A resume-triggered event (visibilitychange, pageshow) can fire before

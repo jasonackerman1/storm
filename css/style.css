@@ -125,9 +125,12 @@ body {
   position: fixed;
   top: 0;
   right: 0;
-  bottom: 0;
   left: 0;
-  height: auto;
+  /* Pinning alone didn't fix it: the readout proved iOS sometimes hands the
+     installed app a viewport 62pt (the status bar) shorter than the screen.
+     Height now comes from --vh, which js/app.js sets from the real screen
+     height when installed (see appHeightPx()). */
+  height: calc(var(--vh, 1vh) * 100);
   overflow: hidden;
 }
 
@@ -789,4 +792,17 @@ body {
 .slot-btn.drag-target .slot-num,
 .slot-btn.drag-target .slot-order {
   opacity: 0.12;
+}
+
+/* Full-screen layers follow the same proven-correct height as body (see
+   appHeightPx() in js/app.js), so on a launch where iOS reports a viewport
+   62pt too short they don't stop short of the bottom either. */
+.splash-screen,
+.sheet-overlay {
+  bottom: auto;
+  height: calc(var(--vh, 1vh) * 100);
+}
+.sheet-full {
+  max-height: calc(var(--vh, 1vh) * 100);
+  height: calc(var(--vh, 1vh) * 100);
 }
