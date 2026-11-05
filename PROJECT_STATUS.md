@@ -1,6 +1,25 @@
 # Storm — Project Status
 
-_Last updated: 2026-10-22_
+_Last updated: 2026-11-05_
+
+## Offseason session (2026-11-05): new player, Announcer Timing, short-launch bug fixed
+
+- **Dominick Randacciu added** (`8edc504`): `p-randacciu`, number `?`, no song, no announcer clip, no default slot. His tile reads **RANDACCIU / ?**. If he plays before he has a song, Jason slots him in as Guest. Real numbers for him and Glas come at jersey ordering (about February; spring starts in March).
+- **Announcer Timing** (`18824bb`, tuned in `9a35ed8` and `032a222`): a three-way picker in Settings replaces the old Overlap on/off switch.
+  - **Name, then Song:** the full announcement, then the song.
+  - **Overlap (default):** the song starts halfway through the name clip.
+  - **Song First (Banana Ball style):** the song starts, the announcer comes in **2s** later, and the music ducks to **50%** while he talks (0.3s down, 0.8s back up).
+  - The settings are the `SONG_FIRST_*` constants next to `STOP_FADE_SECONDS` in `js/app.js`. A phone that had the old switch off carries over as Name, then Song (`storm-announcer-mode` key).
+  - Jason liked 50%. He plans to **re-cut songs much longer, with no fade baked in** (Stop fades now), since 12s clips get tight under Song First (announcer clips are about 6s).
+- **Manage Team's search, player list and Add Player are hidden** (`display:none` wrapper with an ON HOLD comment in `index.html`). They sat below the screen with no scroll, and Jason never used them; Guest songs cover surprise players.
+- **"App sometimes opens too short": FIXED and confirmed on Jason's iPhone** (`adb701b`).
+  - A temporary on-screen readout proved the cause. On about half of cold launches, iOS reports the viewport as 894 instead of 956, short by exactly the 62pt status bar, and never corrects it. `screen.height` is right every time.
+  - Fix: `appHeightPx()` in `js/app.js` uses `screen.height` when installed (standalone), in portrait, and the reported height is smaller. That value feeds `--vh`, which body, `.splash-screen`, `.sheet-overlay` and `.sheet-full` all use.
+  - Jason did about 24 launches with zero short. The readout was removed in `a92db43`.
+  - The earlier dvh / resume / rAF / `inset:0` attempts weren't the cause.
+- Settled, so don't re-raise: no fallback song and no "no song" mark for songless players; Branch's announcer clip is fine; Glas/Owen sharing #7 is fine (Glas likely isn't returning); no favicon; the silent-switch test can't happen (the JBL is the coach's).
+- Smoke test 13/13 pass throughout. No `CACHE_NAME` bump (no media changed).
+- **Next:** Jason sends longer song cuts (full songs plus start times) and listens to Song First at real volume. Real numbers and songs for Randacciu (and Glas, if he stays) when jerseys are ordered.
 
 ## Robby Glas now #7 (2026-10-22)
 
