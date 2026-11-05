@@ -1466,45 +1466,6 @@
     });
   }
 
-  // ---------- TEMPORARY viewport readout (2026-11-05) ----------
-  // Five fixes for the "sometimes opens too short" bug were guesses. This
-  // shows the real numbers iOS reports so a good launch and a bad launch
-  // can be compared from screenshots. Remove once diagnosed.
-  // win = innerHeight, vv = visualViewport height, doc = documentElement
-  // clientHeight, scr = screen height, body = body's rendered height,
-  // sa = safe-area insets top/bottom. "@0" = at launch, "now" = live.
-  function startViewportReadout() {
-    var probe = document.createElement('div');
-    probe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;' +
-      'padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);';
-    document.body.appendChild(probe);
-    var box = document.createElement('div');
-    box.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99999;' +
-      'pointer-events:none;background:rgba(0,0,0,0.8);color:#0f0;font:11px/1.35 monospace;' +
-      'padding:6px 8px;border-radius:6px;white-space:pre;';
-    document.body.appendChild(box);
-    function snap() {
-      var cs = getComputedStyle(probe);
-      return 'win ' + window.innerHeight + ' vv ' + (window.visualViewport ? Math.round(window.visualViewport.height) : '-') +
-        ' doc ' + document.documentElement.clientHeight + ' scr ' + screen.height +
-        '\nbody ' + Math.round(document.body.getBoundingClientRect().height) +
-        ' sa ' + parseInt(cs.paddingTop, 10) + '/' + parseInt(cs.paddingBottom, 10) +
-        '\nst ' + (window.navigator.standalone === true ? 'Y' : 'N') +
-        ' vh ' + Math.round(parseFloat(document.documentElement.style.getPropertyValue('--vh') || '0') * 100) +
-        ' css ' + (getComputedStyle(document.body).bottom === 'auto' ? 'new' : 'old');
-    }
-    var first = snap();
-    var changes = 0, last = first;
-    function update() {
-      var s = snap();
-      if (s !== last) { changes++; last = s; }
-      box.textContent = '@0   ' + first.replace(/\n/g, '\n     ') + '\nnow  ' + s.replace(/\n/g, '\n     ') + '\nchanged ' + changes + 'x';
-    }
-    update();
-    setInterval(update, 500);
-    window.addEventListener('resize', update);
-  }
-
   // ---------- Web Audio setup ----------
   // Constructing an AudioContext needs no user gesture — only resuming it to
   // an audible 'running' state does — so this happens unconditionally at
@@ -1767,7 +1728,6 @@
     // and nothing ever corrected it afterward unless the user happened to
     // resize/rotate/resume. Applying the same deferred recompute here too.
     setViewportHeightVar();
-    startViewportReadout(); // TEMPORARY, see startViewportReadout()
     scheduleViewportHeightRecalc();
     window.addEventListener('resize', setViewportHeightVar);
     window.addEventListener('orientationchange', setViewportHeightVar);
