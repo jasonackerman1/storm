@@ -115,6 +115,20 @@ html, body {
 body {
   display: flex;
   flex-direction: column;
+  /* 5th attempt at the "app sometimes opens too short" bug (2026-11-05).
+     Every earlier fix measured the screen height (100dvh, then a JS --vh
+     from innerHeight) and the bug kept coming back on cold launch, when
+     iOS hands over a wrong measurement. Pinning the body to all four
+     edges lets the browser size it to the real screen with no measuring
+     at all. height:auto overrides the html,body height chain above for
+     body only (html keeps it). */
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: auto;
+  overflow: hidden;
 }
 
 .topbar {
@@ -565,6 +579,39 @@ body {
   border-radius: 12px;
   padding: 14px;
   cursor: pointer;
+}
+
+.settings-row-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  cursor: default;
+}
+
+/* Three-way picker (Announcer Timing). One button lights up gold. */
+.segmented {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #1a1512;
+}
+.segmented button {
+  flex: 1 1 0;
+  min-height: 40px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.15;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+.segmented button.active {
+  background: var(--accent);
+  color: #000;
 }
 
 .settings-row-text { display: flex; flex-direction: column; gap: 3px; }

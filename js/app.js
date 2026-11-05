@@ -8,7 +8,10 @@
   var SOUND_STORE = 'soundboard';
   var SLOTS_KEY = 'storm-slots-v2';
   var STOP_ADVANCES_KEY = 'storm-stop-advances';
+  // Old on/off overlap switch key — only read once to carry over a phone's
+  // existing choice into the new three-way Announcer Timing setting.
   var ANNOUNCER_OVERLAP_KEY = 'storm-announcer-overlap';
+  var ANNOUNCER_MODE_KEY = 'storm-announcer-mode';
   var ANNOUNCER_ENABLED_KEY = 'storm-announcer-enabled';
   var DEFAULT_LINEUP_VERSION_KEY = 'storm-default-lineup-version';
 
@@ -57,7 +60,8 @@
   var selectedSlot = null;
   var dragState = null;
   var stopAdvancesEnabled = true;
-  var announcerOverlapEnabled = true;
+  // 'sequential' | 'overlap' | 'song-first' — see firePlayback().
+  var announcerMode = 'overlap';
   var announcerEnabled = true;
   var objectUrlCache = new Map();
   var nameClipObjectUrlCache = new Map();
@@ -234,23 +238,34 @@
     localStorage.setItem(STOP_ADVANCES_KEY, stopAdvancesEnabled ? '1' : '0');
   }
 
-  // Default ON: overlapping announcer/song playback (halfway-through, the
-  // 2026-09-15 A/B-tested standard) is what every real player's
-  // announcerOverlapFraction drives in firePlayback(). Turning this off
-  // falls back to the plain sequential path (full name clip, then song)
-  // regardless of what announcerOverlapFraction is set to per player.
-  function loadAnnouncerOverlapSetting() {
+  // Announcer Timing (2026-11-05, replaced the old on/off overlap switch):
+  //   'sequential' — full name clip, then the song.
+  //   'overlap'    — song starts halfway through the name clip (the
+  //                  2026-09-15 A/B-tested standard, still the default).
+  //   'song-first' — Banana Ball style: song starts, the name clip comes in
+  //                  SONG_FIRST_DELAY_SECONDS later over the music, with
+  //                  the music ducked down while the announcer talks.
+  // A phone that had the old switch turned off carries over as 'sequential'.
+  var ANNOUNCER_MODES = ['sequential', 'overlap', 'song-first'];
+  var ANNOUNCER_MODE_HINTS = {
+    'sequential': 'Plays the full name announcement, then the song.',
+    'overlap': 'The song starts halfway through the name announcement.',
+    'song-first': 'The song starts first. The announcer comes in a couple of seconds later, with the music turned down while he talks.'
+  };
+
+  function loadAnnouncerModeSetting() {
     try {
-      var raw = localStorage.getItem(ANNOUNCER_OVERLAP_KEY);
-      if (raw === null) return true;
-      return raw === '1';
+      var raw = localStorage.getItem(ANNOUNCER_MODE_KEY);
+      if (ANNOUNCER_MODES.indexOf(raw) !== -1) return raw;
+      if (localStorage.getItem(ANNOUNCER_OVERLAP_KEY) === '0') return 'sequential';
+      return 'overlap';
     } catch (e) {
-      return true;
+      return 'overlap';
     }
   }
 
-  function saveAnnouncerOverlapSetting() {
-    localStorage.setItem(ANNOUNCER_OVERLAP_KEY, announcerOverlapEnabled ? '1' : '0');
+  function saveAnnouncerModeSetting() {
+    try { localStorage.setItem(ANNOUNCER_MODE_KEY, announcerMode); } catch (e) {}
   }
 
   // Default ON: name-announcer clips play before/with each song, same as
@@ -358,6 +373,12 @@
   // How long a manual Stop takes to fade a walk-up song out instead of
   // cutting it off mid-word.
   var STOP_FADE_SECONDS = 1.5;
+
+  // Song First mode (Banana Ball style). Tweak these to taste.
+  var SONG_FIRST_DELAY_SECONDS = 2.5; // music alone before the announcer
+  var SONG_FIRST_DUCK_LEVEL = 0.35;   // music volume while he talks (1 = full)
+  var SONG_FIRST_DUCK_RAMP = 0.3;     // seconds to turn the music down
+  var SONG_FIRST_UNDUCK_RAMP = 0.8;   // seconds to bring it back up after
 
   // Routes a lineup buffer source through its own gain node so a manual
   // Stop can fade just that clip out.
@@ -478,7 +499,13 @@
   // the user manually stops. Buffer-path only, no <audio>-element fallback
   // — every real player already decodes successfully in practice, so this
   // hasn't been a real gap.
-  function playOverlappingBuffers(nameClipBuffer, songBuffer, delaySeconds, onComplete) {
+  // nameDelay/songDelay are seconds after "now" for each clip. duckSong
+  // (song-first mode) turns the music down to SONG_FIRST_DUCK_LEVEL while
+  // the announcer talks, then brings it back up. Ducking rides on the song's
+  // own fadeGain node, so a Stop mid-announcer still fades out cleanly
+  // (silenceSource cancels the scheduled duck and ramps from wherever the
+  // volume is at that moment).
+  function playOverlappingBuffers(nameClipBuffer, songBuffer, nameDelay, songDelay, duckSong, onComplete) {
     var startAt = audioCtx.currentTime;
 
     var nameSource = audioCtx.createBufferSource();
@@ -488,7 +515,7 @@
     nameSource.onended = function () {
       if (secondaryBufferSource === nameSource) secondaryBufferSource = null;
     };
-    nameSource.start(startAt);
+    nameSource.start(startAt + nameDelay);
 
     var songSource = audioCtx.createBufferSource();
     songSource.buffer = songBuffer;
@@ -498,7 +525,18 @@
       if (activeBufferSource === songSource) activeBufferSource = null;
       if (onComplete) onComplete();
     };
-    songSource.start(startAt + delaySeconds);
+    songSource.start(startAt + songDelay);
+
+    if (duckSong) {
+      var g = songSource.fadeGain.gain;
+      var nameStart = startAt + nameDelay;
+      var nameEnd = nameStart + nameClipBuffer.duration;
+      g.setValueAtTime(1, startAt);
+      g.setValueAtTime(1, Math.max(startAt, nameStart - SONG_FIRST_DUCK_RAMP));
+      g.linearRampToValueAtTime(SONG_FIRST_DUCK_LEVEL, nameStart);
+      g.setValueAtTime(SONG_FIRST_DUCK_LEVEL, nameEnd);
+      g.linearRampToValueAtTime(1, nameEnd + SONG_FIRST_UNDUCK_RAMP);
+    }
   }
 
   function songSrcFor(player) {
@@ -556,16 +594,19 @@
     var songBuffer = songBufferFor(player);
     var nameClipBuffer = announcerEnabled ? nameClipBufferFor(player) : null;
 
-    // Overlapping announcer/song playback: only kicks in when a player's
-    // roster.json entry sets announcerOverlapFraction (a number 0-1 — 0.5,
-    // the settled standard, starts the song once the name clip is halfway
-    // done). Team songs and any player without a name clip never set this,
-    // so they fall through to the normal sequential path below unchanged —
-    // as would a buffer-decode failure for either clip.
-    if (announcerOverlapEnabled && audioCtx && songBuffer && needsNameClip && nameClipBuffer &&
-        typeof player.announcerOverlapFraction === 'number') {
+    // Layered announcer/song playback (Overlap and Song First modes) runs on
+    // decoded buffers only. Overlap also needs the player's roster.json
+    // announcerOverlapFraction (0.5 for every real player). Anything that
+    // can't layer — no name clip, Announcers off, a decode failure, or
+    // Name-then-Song mode — falls through to the plain sequential path.
+    var canLayer = audioCtx && songBuffer && needsNameClip && nameClipBuffer;
+    if (canLayer && announcerMode === 'song-first') {
+      playOverlappingBuffers(nameClipBuffer, songBuffer, SONG_FIRST_DELAY_SECONDS, 0, true, onFinished);
+      return;
+    }
+    if (canLayer && announcerMode === 'overlap' && typeof player.announcerOverlapFraction === 'number') {
       var delay = nameClipBuffer.duration * player.announcerOverlapFraction;
-      playOverlappingBuffers(nameClipBuffer, songBuffer, delay, onFinished);
+      playOverlappingBuffers(nameClipBuffer, songBuffer, 0, delay, false, onFinished);
       return;
     }
 
@@ -610,10 +651,16 @@
     el.checked = stopAdvancesEnabled;
   }
 
-  function updateAnnouncerOverlapSwitch() {
-    var el = document.getElementById('setting-announcer-overlap');
-    if (!el) return;
-    el.checked = announcerOverlapEnabled;
+  function updateAnnouncerModeControl() {
+    var group = document.getElementById('setting-announcer-mode');
+    if (!group) return;
+    Array.prototype.forEach.call(group.querySelectorAll('button[data-mode]'), function (btn) {
+      var on = btn.getAttribute('data-mode') === announcerMode;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+    var hint = document.getElementById('announcer-mode-hint');
+    if (hint) hint.textContent = ANNOUNCER_MODE_HINTS[announcerMode] || '';
   }
 
   function updateAnnouncerEnabledSwitch() {
@@ -1308,9 +1355,12 @@
       saveStopAdvancesSetting();
     });
 
-    document.getElementById('setting-announcer-overlap').addEventListener('change', function (e) {
-      announcerOverlapEnabled = e.target.checked;
-      saveAnnouncerOverlapSetting();
+    document.getElementById('setting-announcer-mode').addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-mode]');
+      if (!btn) return;
+      announcerMode = btn.getAttribute('data-mode');
+      saveAnnouncerModeSetting();
+      updateAnnouncerModeControl();
     });
 
     document.getElementById('setting-announcer-enabled').addEventListener('change', function (e) {
@@ -1679,7 +1729,7 @@
 
     slots = loadSlots();
     stopAdvancesEnabled = loadStopAdvancesSetting();
-    announcerOverlapEnabled = loadAnnouncerOverlapSetting();
+    announcerMode = loadAnnouncerModeSetting();
     announcerEnabled = loadAnnouncerEnabledSetting();
 
     fetch('roster.json', { cache: 'no-store' })
@@ -1746,7 +1796,7 @@
         bindEvents();
         updateActionBar();
         updateStopAdvanceSwitch();
-        updateAnnouncerOverlapSwitch();
+        updateAnnouncerModeControl();
         updateAnnouncerEnabledSwitch();
         registerServiceWorker();
         bindWakeLock();

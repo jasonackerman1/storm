@@ -85,16 +85,17 @@
         </span>
       </label>
 
-      <label class="settings-row" for="setting-announcer-overlap">
+      <div class="settings-row settings-row-stacked">
         <span class="settings-row-text">
-          <span class="settings-row-label">Overlap Announcer &amp; Song</span>
-          <span class="settings-row-hint">Song starts partway through the name announcement. Turn off to play the announcement first, then the song.</span>
+          <span class="settings-row-label">Announcer Timing</span>
+          <span id="announcer-mode-hint" class="settings-row-hint"></span>
         </span>
-        <span class="switch">
-          <input type="checkbox" id="setting-announcer-overlap" checked>
-          <span class="switch-track"><span class="switch-thumb"></span></span>
-        </span>
-      </label>
+        <div class="segmented" id="setting-announcer-mode" role="radiogroup" aria-label="Announcer timing">
+          <button type="button" role="radio" data-mode="sequential">Name, then Song</button>
+          <button type="button" role="radio" data-mode="overlap">Overlap</button>
+          <button type="button" role="radio" data-mode="song-first">Song First</button>
+        </div>
+      </div>
 
       <label class="settings-row" for="setting-announcer-enabled">
         <span class="settings-row-text">
@@ -113,6 +114,12 @@
       <p class="form-hint">Re-downloads all songs and app updates from the internet, even ones already saved on this phone. Use this if you just made an edit and don't see it yet. Best done on Wi-Fi before a game, not last-minute on weak signal.</p>
     </div>
 
+    <!-- ON HOLD (2026-11-05): search, player list and Add Player are hidden.
+         They sat below the bottom of the screen and couldn't be reached, and
+         Jason never used them (Guest songs cover a surprise player). Delete
+         style="display:none" to bring them back. Elements stay in the page
+         because app.js looks them up by id. -->
+    <div class="manage-team-onhold" style="display:none">
     <input type="text" id="manage-search" class="manage-search" placeholder="Search by name or number...">
     <div id="manage-player-list" class="player-list manage-list"></div>
 
@@ -134,6 +141,7 @@
       <button type="button" id="clear-nameclip-btn" class="clear-nameclip-btn hidden">&times; Clear name clip</button>
       <button type="submit" class="primary-btn">Add Player</button>
     </form>
+    </div>
   </div>
 </div>
 
