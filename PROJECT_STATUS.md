@@ -1,6 +1,22 @@
 # Storm — Project Status
 
-_Last updated: 2026-11-05_
+_Last updated: 2026-11-06_
+
+## Competitor research + offseason song plan (2026-11-06), no code changes
+
+Researched other walk-up apps (BallparkDJ, Next Batter Up, Dugout Dude, BatDrop, GameDay Music, Walkup Pro, WalkUpJams and others). Their most common complaints are Bluetooth lag, sound dying after the first batter, and clipped intros. Storm already handles all of these (keep-warm hum + pre-decoded audio). No open-source or home-built web app like Storm turned up.
+
+Jason's calls, so don't re-raise them:
+- **No** start time or length setting on the phone. He cuts the start himself.
+- **No** pitcher entrance songs (nobody in the league does them).
+- **No** on-deck marker, since the grid is the batting order and play auto-advances.
+- **No** talk-over button.
+- **Between-innings music:** Apple Music on the side, not built into Storm.
+- **Multiple songs per kid:** add extra roster entries the same way Guest does. Owen is changing his song and will keep his current one as a 2nd option.
+
+**Song length plan (offseason, over the next couple of months):** player songs will be re-cut to **30 seconds from the same start points, with a 2-second fade at the end**. Stop still fades early. Full-length songs were ruled out: Storm pre-decodes every file at startup, and full songs would add about 1 GB of decoded audio (risk of iOS killing the app mid-game). 30s clips are about 11 MB each, so no code change is needed. Jason will send full source files once kids settle on their songs. Only Mason Frank and Robby Glas full originals exist (`Documents/Storm/`). Branch's swear censor must be redone on the longer cut. **Check seconds 12–30 of every song for swears.**
+
+**On hold at Jason's request:** setting the iOS audio session type (`navigator.audioSession`). Storm sets none, so Storm and Apple Music may play on top of each other between innings. If this is ever built: under `'playback'` the always-on keep-alive hum would pause Apple Music as soon as Storm opens. So switch to playback only when Play is tapped, and test on the phone.
 
 ## Offseason session (2026-11-05): new player, Announcer Timing, short-launch bug fixed
 
